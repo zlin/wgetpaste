@@ -1,0 +1,79 @@
+#!/bin/bash
+# A Script that automates pasting to pastebin(s)..
+# based on http://floyd-n-milan.blogspot.com/2006/11/bash-script-to-post-on-pastebins.html
+# but uses wget instead of curl and supports only rafb.net
+######################################################################
+
+showusage() {
+	cat 1>&2 <<EOF
+Usage: $0 [-n nick] [-l language] [-d description] [-f source] [-h|--help|help]
+
+    -n nick        set nick (defaults to your username)
+    -l language    set language (defaults to "Plain Text")
+    -d description set description (defaults to "stdin" or filename)
+    -f source      set source (defaults to stdin)
+
+    Languages supported:
+        "C", "C89", "C99", "C++", "C#", "Java", "Pascal", "Perl",
+        "PHP", "PL/I", "Python", "Ruby", "SQL", "VB", "Plain Text"
+EOF
+}
+
+escape() {
+	local text=$*
+
+	echo "${text}" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
+}	
+
+while getopts ":n:l:d:f:h" opt; do
+	case $opt in
+		n)
+		nick="${OPTARG:=$(whoami)}"
+		;;
+
+		l)
+		lang="${OPTARG:="Plain Text"}"
+		;;
+
+		d)
+		desc="${OPTARG:="shpost Post"}"
+		;;
+
+		f)
+		from="${OPTARG:=/dev/stdin}"
+		;;
+
+		h)
+		showusage
+		exit 0
+		;;
+
+		?)
+		showusage
+		exit 64 #E_WRONGARGS (What's that?)
+	esac
+done
+
+from="${from:-/dev/stdin}"
+input="$(escape "$(<${from})")"
+nick="${nick:-"$(whoami)"}"
+lang="${lang:-"Plain Text"}"
+if [[ "${from}" == "/dev/stdin" ]]; then
+	desc="${desc:-"stdin"}"
+else
+	desc="${desc:-${from}}"
+fi
+
+nick=$(escape "${nick}")
+lang=$(escape "${lang}")
+desc=$(escape "${desc}")
+
+url=$(wget -O - --timeout=10 --post-data="lang=${lang}&nick=${nick}&desc=${desc}&cvt_tabs=2&text=${input}" http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
+
+if [[ "${url}" == "http://rafb.net/p/toofast.html" ]]; then
+	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
+	exit 1
+fi
+
+echo "Your paste can be seen here: ${url}"
+exit 0
