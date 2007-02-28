@@ -15,6 +15,14 @@ die() {
 }
 
 
+# show that an option ${1} is not supported, run function that shows valid options ${3} and die
+fail() {
+	echo "\"$1\" is not a supported $2." 1>&2
+	echo 1>&2
+	${3} 1>&2
+	exit 1
+}
+
 # escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
 escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
@@ -29,6 +37,9 @@ show_usage() {
 	echo "    -l, --language LANG           set language (defaults to \"Plain Text\")"
 	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
 	echo "    -n, --nick NICK               set nick (defaults to your username))"
+	echo "    -s, --service SERVICE         set service to use (defaults to \"rafb\")"
+	echo
+	echo "    -S, --list-services           list supported pastebin services"
 	echo
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
@@ -39,6 +50,55 @@ show_usage() {
 	echo "Languages supported:"
     echo '    "C", "C89", "C99", "C++", "C#", "Java", "Pascal", "Perl",'
     echo '    "PHP", "PL/I", "Python", "Ruby", "SQL", "VB", "Plain Text"'
+}
+
+### services
+
+SERVICES=(rafb sh)
+SERVICE_URLS=(http://rafb.net/paste/paste.php http://sh.nu/p/)
+# 4 (base indentation) + max service length + 2 (space + dash)
+INDENTATION=10
+
+show_services() {
+	echo 'Services supported (case sensitive):'
+	for index in ${!SERVICES[*]}; do
+		echo "    ${SERVICES[index]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[index]}"
+	done
+}
+
+verify_service() {
+	for index in ${!SERVICES[*]}; do
+		[[ "$*" == "${SERVICES[index]}" ]] && return 0
+	done
+	fail "$*" "service" "show_services"
+}
+
+### Posting helper functions
+
+# get the url to post to for any given service
+get_recipient() {
+	for index in ${!SERVICES[*]}; do
+		[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS[index]}" && return 0
+	done
+	echo "Failed to get url for \"${SERVICE}\"." 1>&2
+	exit 1
+}
+
+
+# POST data
+post_data() {
+	case "${SERVICE}" in
+		rafb )
+		echo "nick=${NICK}&lang=${LANGUAGE}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}"
+		;;
+		sh )
+		echo "poster=${NICK}&code=${INPUT}"
+		;;
+		* )
+		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
+		exit 1
+		;;
+	esac
 }
 
 ### read cli options
@@ -86,6 +146,22 @@ while [[ ! -z "${1}" ]]; do
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
+		--service=* )
+		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
+		verify_service "${1#*=}"
+		SERVICE="$(escape "${1#*=}")"
+		shift
+		;;
+		-s | --service )
+		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		verify_service "${2}"
+		SERVICE="$(escape "${2}")"
+		shift 2
+		;;
+		-S | --list-services )
+		show_services
+		exit 0
+		;;
 		-v | --verbose )
 		VERBOSE=true
 		shift
@@ -107,6 +183,7 @@ while [[ ! -z "${1}" ]]; do
 done
 
 # set default service, nick, source and tabs convertion
+SERVICE="${SERVICE:-rafb}"
 NICK="${NICK:-"$(whoami)"}"
 SOURCE="${SOURCE:-/dev/stdin}"
 CVT_TABS="No"
@@ -140,14 +217,18 @@ DESCRIPTION=$(escape "${DESCRIPTION}")
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 [[ -f "${TEMPFILE}" ]] || die "Failed to create a temporary file." 1>&2
 
-echo "lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}" > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+# write paste data to the temporary file
+post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+
+# set recipient
+RECIPIENT="$(get_recipient)"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 --post-file=${TEMPFILE}"
 if [[ ! ${DEBUG} ]] && [[ -w /dev/null ]]; then
-	OUTPUT=$(wget -O /dev/null ${WGET_ARGS} http://rafb.net/paste/paste.php 2>&1)
+	OUTPUT="$(wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
-	OUTPUT=$(wget -O - ${WGET_ARGS} http://rafb.net/paste/paste.php 2>&1)
+	OUTPUT="$(wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 fi
 
 # clean temporary file
@@ -158,7 +239,7 @@ else
 fi
 
 # get the url
-URL="$(echo "${OUTPUT}" | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')"
+URL="$(echo "${OUTPUT}" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p')"
 
 if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
 	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
