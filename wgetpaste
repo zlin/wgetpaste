@@ -271,6 +271,11 @@ while [[ ! -z "${1}" ]]; do
 		echo "$0, version ${VERSION}"
 		exit 0
 		;;
+		-x | --xcut )
+		XCUT=true
+		SOURCE="xcut"
+		shift
+		;;
 		*)
 		if [[ -f "${1}" ]]; then
 			SOURCE="${1}"
@@ -309,7 +314,7 @@ if [[ -z "${DESCRIPTION}" ]]; then
 fi
 
 # handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ ! -r "${SOURCE}" ]]; then
+if [[ ! ${XCUT} ]] && [[ ! -r "${SOURCE}" ]]; then
 	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
 	echo 1>&2
 	show_usage 1>&2
@@ -333,7 +338,7 @@ if [[ ${XCUT} ]]; then
 		exit 1
 	fi
 else
-	INPUT="$(escape "$(<${SOURCE})")"
+	INPUT="$(escape "$( < "${SOURCE}" )")"
 fi
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
