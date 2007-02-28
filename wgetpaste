@@ -131,6 +131,19 @@ post_data() {
 	esac
 }
 
+
+# verify that the pastebin service didn't return a known error url such as toofast.html from rafb
+verify_url() {
+	case "${SERVICE}" in
+		rafb )
+		if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
+			echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds." 1>&2
+			exit 1
+		fi
+		;;
+	esac
+}
+
 ### read cli options
 
 # if you know a better option (like getopts) which provides the same features
@@ -280,10 +293,12 @@ fi
 # get the url
 URL="$(echo "${OUTPUT}" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p')"
 
-if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
-	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
-	exit 1
-elif [[ -z "${URL}" ]]; then
+# verify that the pastebin service didn't return a known error url such as toofast.html from rafb
+# uses ${SERVICE} and ${URL}.
+verify_url
+
+# handle the case when there was no location returned
+if [[ -z "${URL}" ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
 		echo "Apparently nothing was received. Perhaps the connection failed." 1>&2
 		echo "${OUTPUT}" 1>&2
