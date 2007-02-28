@@ -14,10 +14,13 @@ die() {
 	exit 1
 }
 
-
 # show that an option ${1} is not supported, run function that shows valid options ${3} and die
 fail() {
-	echo "\"$1\" is not a supported $2." 1>&2
+	if [[ "${2}" == "service" ]]; then
+		echo "\"$1\" is not a supported $2." 1>&2
+	else
+		echo "\"$1\" is not a supported $2 for ${SERVICE}: $(get_recipient)." 1>&2
+	fi
 	echo 1>&2
 	${3} 1>&2
 	exit 1
@@ -28,16 +31,26 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
+### defaults
+
+# The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
+# Only those three variables should be set in those files.
+[[ -f /etc/wgetpaste ]] && . /etc/wgetpaste
+[[ -f ~/.wgetpaste ]] && . ~/.wgetpaste
+DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
+DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
+DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
+
 ### usage
 
 show_usage() {
 	echo "Usage: $0 [options] [file]"
 	echo
 	echo "Options:"
-	echo "    -l, --language LANG           set language (defaults to \"Plain Text\")"
+	echo "    -l, --language LANG           set language (defaults to \"${DEFAULT_LANGUAGE}\")"
 	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
 	echo "    -n, --nick NICK               set nick (defaults to your username))"
-	echo "    -s, --service SERVICE         set service to use (defaults to \"rafb\")"
+	echo "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")"
 	echo
 	echo "    -S, --list-services           list supported pastebin services"
 	echo "    -L, --list-languages          list languages supported by the specified service"
@@ -47,6 +60,9 @@ show_usage() {
 	echo
 	echo "    -h, --help                    show this help"
 	echo "        --version                 show version information"
+	echo
+	echo "Defaults can be overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
+	echo "Only the vars DEFAULT_{NICK,SERVICE,LANGUAGE} should be set in those files."
 }
 
 ### services
@@ -232,8 +248,8 @@ while [[ ! -z "${1}" ]]; do
 done
 
 # set default service, nick, source and tabs convertion
-SERVICE="${SERVICE:-rafb}"
-NICK="${NICK:-"$(escape "$(whoami)")"}"
+SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
+NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
 SOURCE="${SOURCE:-/dev/stdin}"
 CVT_TABS="No"
 
@@ -241,7 +257,7 @@ CVT_TABS="No"
 [[ ${LIST_LANGUAGES} ]] && show_languages && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
-LANGUAGE="${LANGUAGE:-Plain Text}"
+LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
 verify_language
 LANGUAGE="$(escape "${LANGUAGE}")"
 
