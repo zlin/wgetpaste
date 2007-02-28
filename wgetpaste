@@ -542,27 +542,34 @@ warn_size 1>&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
-[[ -f "${TEMPFILE}" ]] || die "Failed to create a temporary file." 1>&2
+if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
+    # write paste data to the temporary file
+    post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
 
-# write paste data to the temporary file
-post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+    WGET_ARGS="--post-file=${TEMPFILE}"
+else
+	# fall back to using --post-data if the temporary file could not be created
+    WGET_ARGS="--post-data=$(post_data | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
+fi
 
 # set recipient
 RECIPIENT="$(get_recipient "raw")"
 
 # paste it
-WGET_ARGS="--tries=5 --timeout=60 --post-file=${TEMPFILE}"
+WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
 if ! need_stdout && [[ ! ${DEBUG} ]] && [[ -w /dev/null ]]; then
 	OUTPUT="$(wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
 	OUTPUT="$(wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 fi
 
-# clean temporary file
-if [[ ! ${DEBUG} ]]; then
-	rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." 1>&2
-else
-	echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
+# clean temporary file if it was created
+if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
+	if [[ ! ${DEBUG} ]]; then
+		rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." 1>&2
+	else
+		echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
+	fi
 fi
 
 # get the url
