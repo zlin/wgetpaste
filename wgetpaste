@@ -37,7 +37,7 @@ show_url() {
 	# for that task.
 	[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${1}"
 
-	echo "Your ${2}paste can be seen here: $*"
+	echo "Your ${2}paste can be seen here: ${1}"
 }
 
 ### defaults
@@ -417,6 +417,10 @@ while [[ ! -z "${1}" ]]; do
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
 		NICK="$(escape "${2}")"
 		shift 2
+		;;
+		-r | --raw )
+		RAW=true
+		shift
 		;;
 		--service=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
