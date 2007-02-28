@@ -4,7 +4,7 @@
 # Author: Bo Ørsted Andresen, bo.andresen@zlin.dk
 ##########################################################################
 
-VERSION="1.9"
+VERSION="2"
 
 ### helper functions
 
@@ -47,6 +47,7 @@ escape() {
 DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
 DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
+DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 week}"
 
 ### usage
 
@@ -58,9 +59,11 @@ show_usage() {
 	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
 	echo "    -n, --nick NICK               set nick (defaults to your username))"
 	echo "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")"
+	echo "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\""
 	echo
 	echo "    -S, --list-services           list supported pastebin services"
 	echo "    -L, --list-languages          list languages supported by the specified service"
+	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
@@ -71,7 +74,7 @@ show_usage() {
 	echo "        --version                 show version information"
 	echo
 	echo "Defaults can be overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
-	echo "Only the vars DEFAULT_{NICK,SERVICE,LANGUAGE} should be set in those files."
+	echo "Only the vars DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION} should be set in those files."
 }
 
 ### services
@@ -140,6 +143,43 @@ verify_language() {
 	esac
 	fail "${LANGUAGE}" "language" "show_languages"
 }
+
+### expiration
+
+# ca
+ca_EXPIRATION_OPTIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes 1\ hour \
+2\ hours 4\ hours 8\ hours 12\ hours 1\ day 2\ days 3\ days 1\ week 2\ weeks 3\ weeks 1\ month \
+2\ months 3\ months 4\ months 5\ months 6\ months 1\ year)
+
+show_expiration_options() {
+	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
+	case "${SERVICE}" in
+		ca )
+		for index in $(eval "echo \${!${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
+			echo "    $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[index]}")"
+		done
+		;;
+		* )
+		echo 1>&2
+		echo "${SERVICE} has no suppport for setting expiration." 1>&2
+		;;
+	esac
+}
+
+verify_expiration_options() {
+	case "${SERVICE}" in
+		ca )
+		for index in ${!ca_EXPIRATION_OPTIONS[*]}; do
+			[[ "${EXPIRATION}" == "${ca_EXPIRATION_OPTIONS[index]}" ]] && return 0
+		done
+		;;
+		* )
+		[[ ! ${EXPIRATION_SET} ]] && return 0 
+		;;
+	esac
+	fail "${EXPIRATION}" "expiration option" "show_expiration_options"
+}
+
 ### Posting helper functions
 
 # get the url to post to for any given service
@@ -256,6 +296,20 @@ while [[ ! -z "${1}" ]]; do
 		DESCRIPTION="$(escape "${2}")"
 		shift 2
 		;;
+		--expiration=* )
+		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
+		EXPIRATION="${1#*=}"
+		shift
+		;;
+		-e | --expiration )
+		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		EXPIRATION="${2}"
+		shift 2
+		;;
+		-E | --list-expiration )
+		LIST_EXPIRATION=true
+		shift
+		;;
 		-h | --help )
 		show_usage
 		exit 0
@@ -338,10 +392,20 @@ CVT_TABS="No"
 # show languages if requested (needs to be done after the right service is selected)
 [[ ${LIST_LANGUAGES} ]] && show_languages && exit 0
 
+# show expiration options if requested (needs to be done after the right service is selected)
+[[ ${LIST_EXPIRATION} ]] && show_expiration_options && exit 0
+
 # language needs to be verified before it is escaped but after service is selected
 LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
+# uses ${SERVICE} and ${LANGUAGE}. may change the value of the latter.
 verify_language
 LANGUAGE="$(escape "${LANGUAGE}")"
+
+# expiration needs to be verified before it is escaped but after service is selected
+EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
+# uses ${SERVICE} and ${EXPIRATION}. may change the value of the latter.
+verify_expiration_options
+EXPIRATION="$(escape "${EXPIRATION}")"
 
 # set default description
 if [[ -z "${DESCRIPTION}" ]]; then
