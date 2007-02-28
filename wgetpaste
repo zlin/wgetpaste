@@ -31,6 +31,15 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
+show_url() {
+	# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
+	# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
+	# for that task.
+	[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${1}"
+
+	echo "Your ${2}paste can be seen here: $*"
+}
+
 ### defaults
 
 # The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
@@ -68,6 +77,7 @@ show_usage() {
 	echo "    -L, --list-languages          list languages supported by the specified service"
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
+	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
@@ -80,12 +90,15 @@ show_usage() {
 	echo "DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION} may be set in those files. Also"
 	echo "DEFAULT_EXPIRATION_\${SERVICE} may be set to get different default expiration for"
 	echo "different services."
+	echo "Further the functions add_to_clipboard() and get_from_clipboard() may be defined there."
+	echo "Type wgetpaste --xcut for an example."
 }
 
 ### services
 
 SERVICES=(ca rafb sh stgraber)
-SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/paste.php http://sh.nu/p/ http://paste.stgraber.org)
+SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://sh.nu/p/ http://paste.stgraber.org)
+SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://sh.nu/p/ http://paste.stgraber.org)
 # 4 (base indentation) + max service length + 2 (space + dash)
 INDENTATION=14
 
@@ -218,9 +231,15 @@ verify_expiration_options() {
 
 # get the url to post to for any given service
 get_recipient() {
-	for index in ${!SERVICES[*]}; do
-		[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS[index]}" && return 0
-	done
+	if [[ "${1}" == "raw" ]]; then
+		for index in ${!SERVICES[*]}; do
+			[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS_RAW[index]}" && return 0
+		done
+	else
+		for index in ${!SERVICES[*]}; do
+			[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS[index]}" && return 0
+		done
+	fi
 	echo "Failed to get url for \"${SERVICE}\"." 1>&2
 	exit 1
 }
@@ -310,6 +329,26 @@ verify_url() {
 		fi
 		;;
 	esac
+}
+
+# if possible convert URL to raw
+convert_to_raw() {
+	case "${SERVICE}" in
+		ca )
+		RAW_URL="$(echo "${URL}" | sed -e 's|^\(http://pastebin.ca/\)\(.*\)$|\1raw/\2|')"
+		;;
+		rafb )
+		RAW_URL="$(echo "${URL}" | sed -e 's|html\?$|txt|')"
+		;;
+		stgraber )
+		RAW_URL="$(echo "${URL}" | sed -e 's|^\(http://paste.stgraber.org/\)\(.*\)$|\1download/\2|')"
+		;;
+		* )
+		echo "Raw download of pastes is not supported by ${SERVICE}: $(get_recipient)." 1>&2
+		return 1
+		;;
+	esac
+	return 0
 }
 
 ### read cli options
@@ -497,7 +536,7 @@ TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
 
 # set recipient
-RECIPIENT="$(get_recipient)"
+RECIPIENT="$(get_recipient "raw")"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 --post-file=${TEMPFILE}"
@@ -533,10 +572,11 @@ if [[ -z "${URL}" ]]; then
 	exit 1
 fi
 
-# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
-# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
-# for that task.
-[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${URL}"
+# convert_to_raw() may change the value of RAW. Otherwise it set RAW_URL.
+if [[ ${RAW} ]] && convert_to_raw; then
+	show_url "${RAW_URL}" "raw "
+else
+	show_url "${URL}"
+fi
 
-echo "Your paste can be seen here: ${URL}"
 exit 0
