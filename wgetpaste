@@ -40,16 +40,13 @@ show_usage() {
 	echo "    -s, --service SERVICE         set service to use (defaults to \"rafb\")"
 	echo
 	echo "    -S, --list-services           list supported pastebin services"
+	echo "    -L, --list-languages          list languages supported by the specified service"
 	echo
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
 	echo
 	echo "    -h, --help                    show this help"
 	echo "        --version                 show version information"
-	echo
-	echo "Languages supported:"
-    echo '    "C", "C89", "C99", "C++", "C#", "Java", "Pascal", "Perl",'
-    echo '    "PHP", "PL/I", "Python", "Ruby", "SQL", "VB", "Plain Text"'
 }
 
 ### services
@@ -73,6 +70,39 @@ verify_service() {
 	fail "$*" "service" "show_services"
 }
 
+### languages
+
+# rafb
+rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain\ Text)
+
+show_languages() {
+	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
+	case "${SERVICE}" in
+		rafb )
+		for index in ${!rafb_LANGUAGES[*]}; do
+			echo "    ${rafb_LANGUAGES[index]}"
+		done | sort
+		;;
+		* )
+		echo 1>&2
+		echo "\"${SERVICE}\" has no support for any specific languages." 1>&2
+	esac
+}
+
+# this is in place because rafb.net (probably others too) rejects any paste with an invalid language
+verify_language() {
+	case "${SERVICE}" in
+		rafb )
+		for index in ${!rafb_LANGUAGES[*]}; do
+			[[ "${LANGUAGE}" == "${rafb_LANGUAGES[index]}" ]] && return 0
+		done
+		;;
+		* )
+		[[ ! ${LANGUAGE_SET} ]] && return 0
+		;;
+	esac
+	fail "${LANGUAGE}" "language" "show_languages"
+}
 ### Posting helper functions
 
 # get the url to post to for any given service
@@ -128,13 +158,19 @@ while [[ ! -z "${1}" ]]; do
 		;;
 		--language=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
+		LANGUAGE_SET=true
 		LANGUAGE="${1#*=}"
 		shift
 		;;
 		-l | --language )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		LANGUAGE_SET=true
 		LANGUAGE="${2}"
 		shift 2
+		;;
+		-L | --list-languages )
+		LIST_LANGUAGES=true
+		shift
 		;;
 		--nick=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
@@ -184,17 +220,24 @@ done
 
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-rafb}"
-NICK="${NICK:-"$(whoami)"}"
+NICK="${NICK:-"$(escape "$(whoami)")"}"
 SOURCE="${SOURCE:-/dev/stdin}"
 CVT_TABS="No"
-LANGUAGE="${LANGUAGE:-"Plain Text"}"
+
+# show languages if requested (needs to be done after the right service is selected)
+[[ ${LIST_LANGUAGES} ]] && show_languages && exit 0
+
+# language needs to be verified before it is escaped but after service is selected
+LANGUAGE="${LANGUAGE:-Plain Text}"
+verify_language
+LANGUAGE="$(escape "${LANGUAGE}")"
 
 # set default description
 if [[ -z "${DESCRIPTION}" ]]; then
 	if [[ "${SOURCE}" == "/dev/stdin" ]]; then
 		DESCRIPTION="stdin"
 	else
-		DESCRIPTION="${SOURCE}"
+		DESCRIPTION="$(escape "${SOURCE}")"
 	fi
 fi
 
@@ -208,10 +251,6 @@ fi
 
 INPUT="$(escape "$(<${SOURCE})")"
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
-
-NICK=$(escape "${NICK}")
-LANGUAGE=$(escape "${LANGUAGE}")
-DESCRIPTION=$(escape "${DESCRIPTION}")
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
