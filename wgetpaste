@@ -20,9 +20,7 @@ EOF
 }
 
 escape() {
-	local text=$*
-
-	echo "${text}" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
+	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
 while getopts ":n:l:d:f:h" opt; do
@@ -55,6 +53,12 @@ while getopts ":n:l:d:f:h" opt; do
 done
 
 from="${from:-/dev/stdin}"
+
+if [[ ! -r "${from}" ]]; then
+	echo "The input source: \"${from}\" is not readable. Please specify a readable input source with -f. Aborting."
+	exit 1
+fi
+
 input="$(escape "$(<${from})")"
 nick="${nick:-"$(whoami)"}"
 lang="${lang:-"Plain Text"}"
@@ -72,6 +76,9 @@ url=$(wget -O - --timeout=10 --post-data="lang=${lang}&nick=${nick}&desc=${desc}
 
 if [[ "${url}" == "http://rafb.net/p/toofast.html" ]]; then
 	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
+	exit 1
+elif [[ -z "${url}" ]]; then
+	echo "Nothing received. Perhaps the connection failed. Please try again later."
 	exit 1
 fi
 
