@@ -76,8 +76,8 @@ show_usage() {
 
 ### services
 
-SERVICES=(rafb sh)
-SERVICE_URLS=(http://rafb.net/paste/paste.php http://sh.nu/p/)
+SERVICES=(ca rafb sh)
+SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/paste.php http://sh.nu/p/)
 # 4 (base indentation) + max service length + 2 (space + dash)
 INDENTATION=10
 
@@ -99,13 +99,18 @@ verify_service() {
 
 # rafb
 rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain\ Text)
+# ca - ordering is important here as their value is set as their number in the order
+ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby \
+Python Pascal mIRC PL/I XML SQL Scheme ActionScript Ada 	\
+Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS Delphi HTML\ 6\.0\ Strict JavaScript \
+LISP Lua Microprocessor\ ASM Objective\ C VB\.NET)
 
 show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
-		rafb )
-		for index in ${!rafb_LANGUAGES[*]}; do
-			echo "    ${rafb_LANGUAGES[index]}"
+		ca | rafb )
+		for index in $(eval "echo \${!${SERVICE}_LANGUAGES[*]}"); do
+			echo "    $(eval "echo \${${SERVICE}_LANGUAGES[index]}")"
 		done | sort
 		;;
 		* )
@@ -117,6 +122,13 @@ show_languages() {
 # this is in place because rafb.net (probably others too) rejects any paste with an invalid language
 verify_language() {
 	case "${SERVICE}" in
+		ca )
+		let "i = 0"
+		for index in ${!ca_LANGUAGES[*]}; do
+			let "i = i +1"
+			[[ "${LANGUAGE}" == "${ca_LANGUAGES[index]}" ]] && LANGUAGE="${i}" && return 0
+		done
+		;;
 		rafb )
 		for index in ${!rafb_LANGUAGES[*]}; do
 			[[ "${LANGUAGE}" == "${rafb_LANGUAGES[index]}" ]] && return 0
@@ -152,12 +164,18 @@ warn_size() {
 		rafb )
 		[[ ${SIZE} -gt 512000 ]] && print_warning "512 kb"
 		;;
+		ca )
+		[[ ${SIZE} -gt 1024000 ]] && print_warning "1 MB"
+		;;
 	esac
 }
 
 # POST data
 post_data() {
 	case "${SERVICE}" in
+		ca )
+		echo "name=${NICK}&type=${LANGUAGE}&description=${DESCRIPTION}&expiry=${EXPIRATION}&s=Submit+Post&content=${INPUT}"
+		;;
 		rafb )
 		echo "nick=${NICK}&lang=${LANGUAGE}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}"
 		;;
@@ -171,9 +189,30 @@ post_data() {
 	esac
 }
 
+# indicate if ${SERVICE} needs stdout output from wget to get the resulting url
+need_stdout() {
+	case "${SERVICE}" in
+		# this service needs to use a regex to retrieve the url from stdout
+		ca )
+		return 0
+		;;
+		# these services read the reply from Location: which goes to stderr
+		rafb | sh )
+		return 1
+		;;
+		* )
+		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
+		exit 1
+		;;
+	esac
+}
+
 # get the url
 get_url() {
 	case "${SERVICE}" in
+		ca )
+		echo "$*" | sed -n 's|^.*content="[0-9]*;\(http://pastebin.ca/[0-9]*\)".*$|\1|p'
+		;;
 		rafb | sh )
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 		;;
@@ -358,7 +397,7 @@ RECIPIENT="$(get_recipient)"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 --post-file=${TEMPFILE}"
-if [[ ! ${DEBUG} ]] && [[ -w /dev/null ]]; then
+if ! need_stdout && [[ ! ${DEBUG} ]] && [[ -w /dev/null ]]; then
 	OUTPUT="$(wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
 	OUTPUT="$(wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
