@@ -20,6 +20,8 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
+### usage
+
 show_usage() {
 	echo "Usage: $0 [options] [file]"
 	echo
@@ -28,6 +30,7 @@ show_usage() {
 	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
 	echo "    -n, --nick NICK               set nick (defaults to your username))"
 	echo
+	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
 	echo
 	echo "    -h, --help                    show this help"
@@ -83,6 +86,10 @@ while [[ ! -z "${1}" ]]; do
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
+		-v | --verbose )
+		VERBOSE=true
+		shift
+		;;
 		--version )
 		echo "$0, version ${VERSION}"
 		exit 0
@@ -114,8 +121,11 @@ if [[ -z "${DESCRIPTION}" ]]; then
 	fi
 fi
 
+# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
 if [[ ! -r "${SOURCE}" ]]; then
-	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source with -f. Aborting."
+	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
+	echo 1>&2
+	show_usage 1>&2
 	exit 1
 fi
 
@@ -131,7 +141,13 @@ TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 
 echo "lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}" > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
 
-URL=$(wget -O - --timeout=10 --post-file=${TEMPFILE} http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
+# paste it
+WGET_ARGS="--tries=5 --timeout=60 --post-file=${TEMPFILE}"
+if [[ ! ${DEBUG} ]] && [[ -w /dev/null ]]; then
+	OUTPUT=$(wget -O /dev/null ${WGET_ARGS} http://rafb.net/paste/paste.php 2>&1)
+else
+	OUTPUT=$(wget -O - ${WGET_ARGS} http://rafb.net/paste/paste.php 2>&1)
+fi
 
 # clean temporary file
 if [[ ! ${DEBUG} ]]; then
@@ -140,11 +156,20 @@ else
 	echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
 fi
 
+# get the url
+URL="$(echo "${OUTPUT}" | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')"
+
 if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
 	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
 	exit 1
 elif [[ -z "${URL}" ]]; then
-	echo "Nothing received. Perhaps the connection failed. Please try again later."
+	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
+		echo "Apparently nothing was received. Perhaps the connection failed." 1>&2
+		echo "${OUTPUT}" 1>&2
+	else
+		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" 1>&2
+		echo "--debug to get the output from wget that can help diagnose it correctly." 1>&2
+	fi
 	exit 1
 fi
 
