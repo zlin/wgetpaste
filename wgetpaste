@@ -125,7 +125,20 @@ NICK=$(escape "${NICK}")
 LANGUAGE=$(escape "${LANGUAGE}")
 DESCRIPTION=$(escape "${DESCRIPTION}")
 
-URL=$(wget -O - --timeout=10 --post-data="lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}" http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
+# create temp file (wget is much more reliable reading large input from a file than from the cli directly
+TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
+[[ -f "${TEMPFILE}" ]] || die "Failed to create a temporary file." 1>&2
+
+echo "lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}" > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+
+URL=$(wget -O - --timeout=10 --post-file=${TEMPFILE} http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
+
+# clean temporary file
+if [[ ! ${DEBUG} ]]; then
+	rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." 1>&2
+else
+	echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
+fi
 
 if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
 	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
