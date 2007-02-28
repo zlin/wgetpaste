@@ -183,6 +183,11 @@ show_expiration_options() {
 			echo "    $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[index]}")"
 		done
 		;;
+		rafb )
+		echo 1>&2
+		echo "Pastes on ${SERVICE}: $(get_recipient) expires after 24 hours." 1>&2
+		echo "${SERVICE} has no suppport for setting expiration." 1>&2
+		;;
 		* )
 		echo 1>&2
 		echo "${SERVICE} has no suppport for setting expiration." 1>&2
