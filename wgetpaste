@@ -99,7 +99,20 @@ while [[ ! -z "${1}" ]]; do
 	esac
 done
 
+# set default service, nick, source and tabs convertion
+NICK="${NICK:-"$(whoami)"}"
 SOURCE="${SOURCE:-/dev/stdin}"
+CVT_TABS="No"
+LANGUAGE="${LANGUAGE:-"Plain Text"}"
+
+# set default description
+if [[ -z "${DESCRIPTION}" ]]; then
+	if [[ "${SOURCE}" == "/dev/stdin" ]]; then
+		DESCRIPTION="stdin"
+	else
+		DESCRIPTION="${SOURCE}"
+	fi
+fi
 
 if [[ ! -r "${SOURCE}" ]]; then
 	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source with -f. Aborting."
@@ -107,19 +120,12 @@ if [[ ! -r "${SOURCE}" ]]; then
 fi
 
 INPUT="$(escape "$(<${SOURCE})")"
-NICK="${NICK:-"$(whoami)"}"
-LANGUAGE="${LANGUAGE:-"Plain Text"}"
-if [[ "${SOURCE}" == "/dev/stdin" ]]; then
-	DESCRIPTION="${DESCRIPTION:-"stdin"}"
-else
-	DESCRIPTION="${DESCRIPTION:-${SOURCE}}"
-fi
 
 NICK=$(escape "${NICK}")
 LANGUAGE=$(escape "${LANGUAGE}")
 DESCRIPTION=$(escape "${DESCRIPTION}")
 
-URL=$(wget -O - --timeout=10 --post-data="lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=2&text=${INPUT}" http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
+URL=$(wget -O - --timeout=10 --post-data="lang=${LANGUAGE}&nick=${NICK}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}" http://rafb.net/paste/paste.php 2>&1 | sed -n 's|^.*Location:\ \(http://rafb.net/p[^\ ]\+\).*$|\1|p')
 
 if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
 	echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
