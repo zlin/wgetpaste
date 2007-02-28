@@ -1,6 +1,6 @@
 #!/bin/bash
 # A Script that automates pasting to a number of pastebin services
-# relying only on bash v3, sed, coreutils (mktemp/sort/wc/whoami) and wget
+# relying only on bash, sed, coreutils (mktemp/sort/wc/whoami) and wget
 # Author: Bo Ørsted Andresen, bo.andresen@zlin.dk
 ##########################################################################
 
@@ -104,14 +104,16 @@ INDENTATION=14
 
 show_services() {
 	echo 'Services supported (case sensitive):'
-	for index in ${SERVICES[*]}; do
-		echo "    ${SERVICES[index]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[index]}"
+	let "i = 0"
+	for service in ${SERVICES[*]}; do
+		echo "    ${service} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
+		let "i = i + 1"
 	done
 }
 
 verify_service() {
-	for index in ${SERVICES[*]}; do
-		[[ "$*" == "${SERVICES[index]}" ]] && return 0
+	for service in ${SERVICES[*]}; do
+		[[ "$*" == "${service}" ]] && return 0
 	done
 	fail "$*" "service" "show_services"
 }
@@ -141,8 +143,8 @@ show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
 		ca | rafb | stgraber )
-		for index in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
-			echo "    $(eval "echo \${${SERVICE}_LANGUAGES[index]}")"
+		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
+			echo "    ${language}"
 		done | sort
 		;;
 		* )
@@ -156,19 +158,21 @@ verify_language() {
 	case "${SERVICE}" in
 		ca )
 		let "i = 0"
-		for index in ${ca_LANGUAGES[*]}; do
+		for language in ${ca_LANGUAGES[*]}; do
 			let "i = i +1"
-			[[ "${LANGUAGE}" == "${ca_LANGUAGES[index]}" ]] && LANGUAGE="${i}" && return 0
+			[[ "${LANGUAGE}" == "${language}" ]] && LANGUAGE="${i}" && return 0
 		done
 		;;
 		rafb )
-		for index in ${rafb_LANGUAGES[*]}; do
-			[[ "${LANGUAGE}" == "${rafb_LANGUAGES[index]}" ]] && return 0
+		for language in ${rafb_LANGUAGES[*]}; do
+			[[ "${LANGUAGE}" == "${language}" ]] && return 0
 		done
 		;;
 		stgraber )
-		for index in ${stgraber_LANGUAGES[*]}; do
-			[[ "${LANGUAGE}" == "${stgraber_LANGUAGES[index]}" ]] && LANGUAGE="${stgraber_LANGUAGE_VALUES[index]}" && return 0
+		let "i = 0"
+		for language in ${stgraber_LANGUAGES[*]}; do
+			[[ "${LANGUAGE}" == "${language}" ]] && LANGUAGE="${stgraber_LANGUAGE_VALUES[i]}" && return 0
+			let "i = i + 1"
 		done
 		;;
 		* )
@@ -192,8 +196,8 @@ show_expiration_options() {
 	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
 	case "${SERVICE}" in
 		ca | stgraber )
-		for index in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
-			echo "    $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[index]}")"
+		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
+			echo "    ${expiration}"
 		done
 		;;
 		rafb )
@@ -211,13 +215,15 @@ show_expiration_options() {
 verify_expiration_options() {
 	case "${SERVICE}" in
 		ca )
-		for index in ${ca_EXPIRATION_OPTIONS[*]}; do
-			[[ "${EXPIRATION}" == "${ca_EXPIRATION_OPTIONS[index]}" ]] && return 0
+		for expiration in ${ca_EXPIRATION_OPTIONS[*]}; do
+			[[ "${EXPIRATION}" == "${expiration}" ]] && return 0
 		done
 		;;
 		stgraber )
-		for index in ${stgraber_EXPIRATION_OPTIONS[*]}; do
-			[[ "${EXPIRATION}" == "${stgraber_EXPIRATION_OPTIONS[index]}" ]] && EXPIRATION="${stgraber_EXPIRATION_VALUES[index]}" && return 0
+		let "i = 0"
+		for expiration in ${stgraber_EXPIRATION_OPTIONS[*]}; do
+			[[ "${EXPIRATION}" == "${expiration}" ]] && EXPIRATION="${stgraber_EXPIRATION_VALUES[i]}" && return 0
+			let "i = i + 1"
 		done
 		;;
 		* )
@@ -232,12 +238,16 @@ verify_expiration_options() {
 # get the url to post to for any given service
 get_recipient() {
 	if [[ "${1}" == "raw" ]]; then
-		for index in ${SERVICES[*]}; do
-			[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS_RAW[index]}" && return 0
+		let "i = 0"
+		for service in ${SERVICES[*]}; do
+			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS_RAW[i]}" && return 0
+			let "i = i + 1"
 		done
 	else
-		for index in ${SERVICES[*]}; do
-			[[ "${SERVICE}" == "${SERVICES[index]}" ]] && echo "${SERVICE_URLS[index]}" && return 0
+		let "i = 0"
+		for service in ${SERVICES[*]}; do
+			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS[i]}" && return 0
+			let "i = i + 1"
 		done
 	fi
 	echo "Failed to get url for \"${SERVICE}\"." 1>&2
