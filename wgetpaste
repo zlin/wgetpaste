@@ -1,6 +1,6 @@
 #!/bin/bash
 # A Script that automates pasting to a number of pastebin services
-# relying only on bash, sed, coreutils (mktemp/sort/wc/whoami) and wget
+# relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami) and wget
 # Author: Bo Ørsted Andresen, bo.andresen@zlin.dk
 ##########################################################################
 
