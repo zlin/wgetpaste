@@ -34,7 +34,14 @@ escape() {
 ### defaults
 
 # The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
-# Only those three variables should be set in those files.
+# Only those four variables should be set in those files.
+#
+# If add_to_clipboard() is defined as a function in one of those files it will be called with
+# the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
+# whatever your window manager provides for adding it to your clipboard.
+#
+# Likewise if get_from_clipboard() is defined as a funciont in one of those files it will be
+# called to retrieve input from your clipboard when --xcut is used.
 [[ -f /etc/wgetpaste ]] && . /etc/wgetpaste
 [[ -f ~/.wgetpaste ]] && . ~/.wgetpaste
 DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
@@ -54,6 +61,8 @@ show_usage() {
 	echo
 	echo "    -S, --list-services           list supported pastebin services"
 	echo "    -L, --list-languages          list languages supported by the specified service"
+	echo
+	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
@@ -307,7 +316,25 @@ if [[ ! -r "${SOURCE}" ]]; then
 	exit 1
 fi
 
-INPUT="$(escape "$(<${SOURCE})")"
+# read input
+if [[ ${XCUT} ]]; then
+	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
+		INPUT="$(escape "$(get_from_clipboard)")"
+	else
+		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use --xcut." 1>&2
+		echo "If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
+		echo 1>&2
+		echo -e "get_from_clipboard() {\n    xclip -o\n}\n" 1>&2
+		echo "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" 1>&2
+		echo "define it like this:" 1>&2
+		echo 1>&2
+		echo -e "add_to_clipboard() {\n    xclip \"\$*\"\n}\n" 1>&2
+		echo "Use whatever your window manager provides to alter your clipboard." 1>&2
+		exit 1
+	fi
+else
+	INPUT="$(escape "$(<${SOURCE})")"
+fi
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
@@ -357,6 +384,11 @@ if [[ -z "${URL}" ]]; then
 	fi
 	exit 1
 fi
+
+# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
+# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
+# for that task.
+[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${URL}"
 
 echo "Your paste can be seen here: ${URL}"
 exit 0
