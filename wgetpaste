@@ -79,10 +79,10 @@ show_usage() {
 
 ### services
 
-SERVICES=(ca rafb sh)
-SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/paste.php http://sh.nu/p/)
+SERVICES=(ca rafb sh stgraber)
+SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/paste.php http://sh.nu/p/ http://paste.stgraber.org)
 # 4 (base indentation) + max service length + 2 (space + dash)
-INDENTATION=10
+INDENTATION=14
 
 show_services() {
 	echo 'Services supported (case sensitive):'
@@ -107,11 +107,22 @@ ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Rub
 Python Pascal mIRC PL/I XML SQL Scheme ActionScript Ada 	\
 Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS Delphi HTML\ 6\.0\ Strict JavaScript \
 LISP Lua Microprocessor\ ASM Objective\ C VB\.NET)
+# stgraber - ordering for languages and values must be the same
+stgraber_LANGUAGES=(Plain\ Text ActionScript Ada Apache\ Log\ File AppleScript \
+Assembly\ \(NASM\) ASP Bash C C\ for\ Macs CAD\ DCL CAD\ Lisp C++ C\# ColdFusion CSS D Delphi \
+Diff DOS Eiffel Fortran FreeBasic Game\ Maker HTML INI\ file Java Javascript Lisp Lua MatLab \
+Microprocessor\ ASM MySQL NullSoft\ Installer Objective\ C OCaml Openoffice\.org\ BASIC \
+Oracle\ 8 Pascal Perl PHP Python QBasic\/QuickBASIC Robots Ruby Scheme Smarty SQL TCL VB \
+VB\.NET VisualFoxPro XML)
+stgraber_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c\_mac caddcl cadlisp \
+cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
+javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
+qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
 
 show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
-		ca | rafb )
+		ca | rafb | stgraber )
 		for index in $(eval "echo \${!${SERVICE}_LANGUAGES[*]}"); do
 			echo "    $(eval "echo \${${SERVICE}_LANGUAGES[index]}")"
 		done | sort
@@ -135,6 +146,11 @@ verify_language() {
 		rafb )
 		for index in ${!rafb_LANGUAGES[*]}; do
 			[[ "${LANGUAGE}" == "${rafb_LANGUAGES[index]}" ]] && return 0
+		done
+		;;
+		stgraber )
+		for index in ${!stgraber_LANGUAGES[*]}; do
+			[[ "${LANGUAGE}" == "${stgraber_LANGUAGES[index]}" ]] && LANGUAGE="${stgraber_LANGUAGE_VALUES[index]}" && return 0
 		done
 		;;
 		* )
@@ -201,7 +217,7 @@ warn_size() {
 	}
 
 	case "${SERVICE}" in
-		rafb )
+		rafb | stgraber )
 		[[ ${SIZE} -gt 512000 ]] && print_warning "512 kb"
 		;;
 		ca )
@@ -222,6 +238,9 @@ post_data() {
 		sh )
 		echo "poster=${NICK}&code=${INPUT}"
 		;;
+		stgraber )
+		echo "poster=${NICK}&format=${LANGUAGE}&title=${DESCRIPTION}&paste=Send&code2=${INPUT}"
+		;;
 		* )
 		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
 		exit 1
@@ -237,7 +256,7 @@ need_stdout() {
 		return 0
 		;;
 		# these services read the reply from Location: which goes to stderr
-		rafb | sh )
+		rafb | sh | stgraber )
 		return 1
 		;;
 		* )
@@ -253,7 +272,7 @@ get_url() {
 		ca )
 		echo "$*" | sed -n 's|^.*content="[0-9]*;\(http://pastebin.ca/[0-9]*\)".*$|\1|p'
 		;;
-		rafb | sh )
+		rafb | sh | stgraber )
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 		;;
 		* )
