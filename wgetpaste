@@ -130,6 +130,21 @@ get_recipient() {
 	exit 1
 }
 
+# print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
+# service in that regard. for now no warning will be printed for that. note that this is only a warning printed.
+# it doesn't abort or anything.
+warn_size() {
+	print_warning() {
+		echo "Pasting > ${1} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
+		echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+	}
+
+	case "${SERVICE}" in
+		rafb )
+		[[ ${SIZE} -gt 512000 ]] && print_warning "512 kb"
+		;;
+	esac
+}
 
 # POST data
 post_data() {
@@ -147,6 +162,18 @@ post_data() {
 	esac
 }
 
+# get the url
+get_url() {
+	case "${SERVICE}" in
+		rafb | sh )
+		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
+		;;
+		* )
+		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
+		exit 1
+		;;
+	esac
+}
 
 # verify that the pastebin service didn't return a known error url such as toofast.html from rafb
 verify_url() {
@@ -247,6 +274,8 @@ while [[ ! -z "${1}" ]]; do
 	esac
 done
 
+### everything below this should be independent of which service is being used...
+
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
@@ -281,6 +310,10 @@ fi
 INPUT="$(escape "$(<${SOURCE})")"
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
+# print a friendly warning if the size makes failure predictable for the specified pastebin service.
+SIZE=$(echo "${INPUT}" | wc -c)
+warn_size 1>&2
+
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 [[ -f "${TEMPFILE}" ]] || die "Failed to create a temporary file." 1>&2
@@ -307,7 +340,7 @@ else
 fi
 
 # get the url
-URL="$(echo "${OUTPUT}" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p')"
+URL="$(get_url "${OUTPUT}")"
 
 # verify that the pastebin service didn't return a known error url such as toofast.html from rafb
 # uses ${SERVICE} and ${URL}.
