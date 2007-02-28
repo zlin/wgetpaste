@@ -48,6 +48,9 @@ DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
 DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
 DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 week}"
+# setting DEFAULT_EXPIRATION_${SERVICE} can be used to override for services where the general
+# default is unavailable.
+DEFAULT_EXPIRATION_stgraber="${DEFAULT_EXPIRATION_stgraber:-1 month}"
 
 ### usage
 
@@ -74,7 +77,9 @@ show_usage() {
 	echo "        --version                 show version information"
 	echo
 	echo "Defaults can be overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
-	echo "Only the vars DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION} should be set in those files."
+	echo "DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION} may be set in those files. Also"
+	echo "DEFAULT_EXPIRATION_\${SERVICE} may be set to get different default expiration for"
+	echo "different services."
 }
 
 ### services
@@ -166,11 +171,14 @@ verify_language() {
 ca_EXPIRATION_OPTIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes 1\ hour \
 2\ hours 4\ hours 8\ hours 12\ hours 1\ day 2\ days 3\ days 1\ week 2\ weeks 3\ weeks 1\ month \
 2\ months 3\ months 4\ months 5\ months 6\ months 1\ year)
+# stgraber - ordering for options and values must be the same
+stgraber_EXPIRATION_OPTIONS=(Never 1\ day 1\ month)
+stgraber_EXPIRATION_VALUES=(f d m)
 
 show_expiration_options() {
 	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
 	case "${SERVICE}" in
-		ca )
+		ca | stgraber )
 		for index in $(eval "echo \${!${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
 			echo "    $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[index]}")"
 		done
@@ -187,6 +195,11 @@ verify_expiration_options() {
 		ca )
 		for index in ${!ca_EXPIRATION_OPTIONS[*]}; do
 			[[ "${EXPIRATION}" == "${ca_EXPIRATION_OPTIONS[index]}" ]] && return 0
+		done
+		;;
+		stgraber )
+		for index in ${!stgraber_EXPIRATION_OPTIONS[*]}; do
+			[[ "${EXPIRATION}" == "${stgraber_EXPIRATION_OPTIONS[index]}" ]] && EXPIRATION="${stgraber_EXPIRATION_VALUES[index]}" && return 0
 		done
 		;;
 		* )
@@ -239,7 +252,7 @@ post_data() {
 		echo "poster=${NICK}&code=${INPUT}"
 		;;
 		stgraber )
-		echo "poster=${NICK}&format=${LANGUAGE}&title=${DESCRIPTION}&paste=Send&code2=${INPUT}"
+		echo "poster=${NICK}&format=${LANGUAGE}&title=${DESCRIPTION}&expiry=${EXPIRATION}&paste=Send&code2=${INPUT}"
 		;;
 		* )
 		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
@@ -317,11 +330,13 @@ while [[ ! -z "${1}" ]]; do
 		;;
 		--expiration=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
+		EXPIRATION_SET=true
 		EXPIRATION="${1#*=}"
 		shift
 		;;
 		-e | --expiration )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		EXPIRATION_SET=true
 		EXPIRATION="${2}"
 		shift 2
 		;;
@@ -421,6 +436,7 @@ verify_language
 LANGUAGE="$(escape "${LANGUAGE}")"
 
 # expiration needs to be verified before it is escaped but after service is selected
+[[ -n "$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")" ]] && EXPIRATION="${EXPIRATION:-$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")}"
 EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
 # uses ${SERVICE} and ${EXPIRATION}. may change the value of the latter.
 verify_expiration_options
