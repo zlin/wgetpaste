@@ -130,6 +130,7 @@ if [[ ! -r "${SOURCE}" ]]; then
 fi
 
 INPUT="$(escape "$(<${SOURCE})")"
+[[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
 NICK=$(escape "${NICK}")
 LANGUAGE=$(escape "${LANGUAGE}")
