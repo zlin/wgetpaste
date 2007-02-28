@@ -91,11 +91,11 @@ show_usage() {
 
 ### services
 
-SERVICES=(ca rafb osl sh stgraber)
-SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://pastebin.osuosl.org/ http://sh.nu/p/ http://paste.stgraber.org)
-SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://pastebin.osuosl.org/pastebin.php http://sh.nu/p/ http://paste.stgraber.org)
+SERVICES=(ca rafb osl sh)
+SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://pastebin.osuosl.org/ http://sh.nu/p/)
+SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://pastebin.osuosl.org/pastebin.php http://sh.nu/p/)
 # 4 (base indentation) + max service length + 2 (space + dash)
-INDENTATION=14
+INDENTATION=10
 
 show_services() {
 	echo 'Services supported (case sensitive):'
@@ -131,21 +131,11 @@ osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_m
 cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
 javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
 qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
-# stgraber - ordering for languages and values must be the same
-stgraber_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
-ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game_Maker HTML INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM MySQL \
-NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
-QBasic\/QuickBASIC Robots Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
-stgraber_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_mac caddcl \
-cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
-javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
-qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
 
 show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
-		ca | osl | rafb | stgraber )
+		ca | osl | rafb )
 		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
 			echo "    ${language//_/ }"
 		done | sort
@@ -171,7 +161,7 @@ verify_language() {
 			[[ "${LANGUAGE}" == "${language//_/ }" ]] && return 0
 		done
 		;;
-		osl | stgraber )
+		osl )
 		let "i = 0"
 		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
 			[[ "${LANGUAGE}" == "${language//_/ }" ]] && LANGUAGE="$(eval "echo \${${SERVICE}_LANGUAGE_VALUES[i]}")" && return 0
@@ -194,14 +184,11 @@ ca_EXPIRATION_OPTIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minut
 # osl - ordering for options and values must be the same
 osl_EXPIRATION_OPTIONS=(Never 1_day 1_month)
 osl_EXPIRATION_VALUES=(f d m)
-# stgraber - ordering for options and values must be the same
-stgraber_EXPIRATION_OPTIONS=(Never 1_day 1_month)
-stgraber_EXPIRATION_VALUES=(f d m)
 
 show_expiration_options() {
 	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
 	case "${SERVICE}" in
-		ca | osl | stgraber )
+		ca | osl )
 		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
 			echo "    ${expiration//_/ }"
 		done
@@ -225,7 +212,7 @@ verify_expiration_options() {
 			[[ "${EXPIRATION}" == "${expiration//_/ }" ]] && return 0
 		done
 		;;
-		osl | stgraber )
+		osl )
 		let "i = 0"
 		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
 			[[ "${EXPIRATION}" == "${expiration//_/ }" ]] && EXPIRATION="$(eval "echo \${${SERVICE}_EXPIRATION_VALUES[i]}")" && return 0
@@ -270,7 +257,7 @@ warn_size() {
 	}
 
 	case "${SERVICE}" in
-		rafb | stgraber )
+		rafb )
 		[[ ${SIZE} -gt 512000 ]] && print_warning "512 kb"
 		;;
 		ca )
@@ -294,9 +281,6 @@ post_data() {
 		sh )
 		echo "poster=${NICK}&code=${INPUT}"
 		;;
-		stgraber )
-		echo "poster=${NICK}&format=${LANGUAGE}&title=${DESCRIPTION}&expiry=${EXPIRATION}&paste=Send&code2=${INPUT}"
-		;;
 		* )
 		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
 		exit 1
@@ -312,7 +296,7 @@ need_stdout() {
 		return 0
 		;;
 		# these services read the reply from Location: which goes to stderr
-		osl | rafb | sh | stgraber )
+		osl | rafb | sh )
 		return 1
 		;;
 		* )
@@ -328,7 +312,7 @@ get_url() {
 		ca )
 		echo "$*" | sed -n 's|^.*content="[0-9]*;\(http://pastebin.ca/[0-9]*\)".*$|\1|p'
 		;;
-		osl | rafb | sh | stgraber )
+		osl | rafb | sh )
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 		;;
 		* )
@@ -361,9 +345,6 @@ convert_to_raw() {
 		;;
 		rafb )
 		RAW_URL="$(echo "${URL}" | sed -e 's|html\?$|txt|')"
-		;;
-		stgraber )
-		RAW_URL="$(echo "${URL}" | sed -e 's|^\(http://paste.stgraber.org/\)\(.*\)$|\1download/\2|')"
 		;;
 		* )
 		echo "Raw download of pastes is not supported by ${SERVICE}: $(get_recipient)." 1>&2
