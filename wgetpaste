@@ -86,12 +86,8 @@ show_usage() {
 	echo "    -h, --help                    show this help"
 	echo "        --version                 show version information"
 	echo
-	echo "Defaults can be overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
-	echo "DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION} may be set in those files. Also"
-	echo "DEFAULT_EXPIRATION_\${SERVICE} may be set to get different default expiration for"
-	echo "different services."
-	echo "Further the functions add_to_clipboard() and get_from_clipboard() may be defined there."
-	echo "Type wgetpaste --xcut for an example."
+	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION,EXPIRATION_\${SERVICE}}) can be"
+	echo "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
 }
 
 ### services
@@ -520,15 +516,16 @@ if [[ ${XCUT} ]]; then
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
 		INPUT="$(escape "$(get_from_clipboard)")"
 	else
-		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use --xcut." 1>&2
-		echo "If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
+		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" 1>&2
+		echo "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
 		echo 1>&2
 		echo -e "get_from_clipboard() {\n    xclip -o\n}\n" 1>&2
 		echo "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" 1>&2
 		echo "define it like this:" 1>&2
 		echo 1>&2
 		echo -e "add_to_clipboard() {\n    xclip \"\$*\"\n}\n" 1>&2
-		echo "Use whatever your window manager provides to alter your clipboard." 1>&2
+		echo "You may use whatever your window manager provides to alter your clipboard instead" 1>&2
+		echo "of xclip." 1>&2
 		exit 1
 	fi
 else
@@ -549,6 +546,7 @@ if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
     WGET_ARGS="--post-file=${TEMPFILE}"
 else
 	# fall back to using --post-data if the temporary file could not be created
+	# TABs and new lines need to be escaped for wget to interpret it as one string
     WGET_ARGS="--post-data=$(post_data | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 fi
 
