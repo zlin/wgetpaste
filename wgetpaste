@@ -70,7 +70,7 @@ show_usage() {
 	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
 	echo "    -n, --nick NICK               set nick (defaults to your username))"
 	echo "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")"
-	echo "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\""
+	echo "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\")"
 	echo
 	echo "    -S, --list-services           list supported pastebin services"
 	echo "    -L, --list-languages          list languages supported by the specified service"
