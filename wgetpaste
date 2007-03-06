@@ -76,6 +76,7 @@ show_usage() {
 	echo "    -L, --list-languages          list languages supported by the specified service"
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
+	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
 	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
@@ -360,6 +361,18 @@ convert_to_raw() {
 # please let me know how.
 while [[ ! -z "${1}" ]]; do
 	case "${1}" in
+		--command=* )
+		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
+		COMMAND=true
+		SOURCE="${1#*=}"
+		shift
+		;;
+		-c | --command )
+		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		COMMAND=true
+		SOURCE="${2}"
+		shift 2
+		;;
 		--debug )
 		DEBUG=true
 		set -x
@@ -503,7 +516,7 @@ if [[ -z "${DESCRIPTION}" ]]; then
 fi
 
 # handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ ! ${XCUT} ]] && [[ ! -r "${SOURCE}" ]]; then
+if [[ ! ${XCUT} ]] && [[ ! ${COMMAND} ]] && [[ ! -r "${SOURCE}" ]]; then
 	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
 	echo 1>&2
 	show_usage 1>&2
@@ -527,6 +540,13 @@ if [[ ${XCUT} ]]; then
 		echo "of xclip." 1>&2
 		exit 1
 	fi
+elif [[ ${COMMAND} ]]; then
+	if [[ ${UID} == 0 ]]; then
+		PS1="#"
+	else
+		PS1="$"
+	fi
+	INPUT="$(escape "${PS1} ${SOURCE}"$'\n'"$(${SOURCE})")"
 else
 	INPUT="$(escape "$( < "${SOURCE}" )")"
 fi
