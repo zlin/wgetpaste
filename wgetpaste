@@ -541,24 +541,19 @@ if [[ -z "${DESCRIPTION}" ]]; then
 	fi
 fi
 
-# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ "${SOURCE}" != "command" ]] && [[ "${SOURCE}" != "info" ]] && [[ "${SOURCE}" != "xcut" ]] && [[ ! -r "${SOURCE}" ]]; then
-	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
-	echo 1>&2
-	show_usage 1>&2
-	exit 1
-fi
-
 # read input
-if [[ "${SOURCE}" == "command" ]]; then
+case "${SOURCE}" in
+	command )
 	PS1="$(get_ps1)"
 	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
 		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
 	done
-elif [[ "${SOURCE}" == "info" ]]; then
+	;;
+	info )
 	PS1="$(get_ps1)"
 	INPUT="${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
-elif [[ "${SOURCE}" == "xcut" ]]; then
+	;;
+	xcut )
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
 		INPUT="$(get_from_clipboard)"
 	else
@@ -574,9 +569,18 @@ elif [[ "${SOURCE}" == "xcut" ]]; then
 		echo "of xclip." 1>&2
 		exit 1
 	fi
-else
+	;;
+	* )
+	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
+	if [[ ! -r "${SOURCE}" ]]; then
+		echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
+		echo 1>&2
+		show_usage 1>&2
+		exit 1
+	fi
 	INPUT="$( < "${SOURCE}" )"
-fi
+	;;
+esac
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
 # append emerge --info if needed
