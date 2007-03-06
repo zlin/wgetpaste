@@ -77,9 +77,9 @@ show_usage() {
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
 	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
-	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
+	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
 	echo
