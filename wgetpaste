@@ -363,14 +363,14 @@ while [[ ! -z "${1}" ]]; do
 	case "${1}" in
 		--command=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		COMMAND=true
-		SOURCE="${1#*=}"
+		SOURCE="command"
+		COMMANDS[${#COMMANDS[*]}]="${1#*=}"
 		shift
 		;;
 		-c | --command )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
-		COMMAND=true
-		SOURCE="${2}"
+		SOURCE="command"
+		COMMANDS[${#COMMANDS[*]}]="${2}"
 		shift 2
 		;;
 		--debug )
@@ -463,7 +463,6 @@ while [[ ! -z "${1}" ]]; do
 		exit 0
 		;;
 		-x | --xcut )
-		XCUT=true
 		SOURCE="xcut"
 		shift
 		;;
@@ -516,7 +515,7 @@ if [[ -z "${DESCRIPTION}" ]]; then
 fi
 
 # handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ ! ${XCUT} ]] && [[ ! ${COMMAND} ]] && [[ ! -r "${SOURCE}" ]]; then
+if [[ "${SOURCE}" != "xcut" ]] && [[ "${SOURCE}" != "command" ]] && [[ ! -r "${SOURCE}" ]]; then
 	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
 	echo 1>&2
 	show_usage 1>&2
@@ -524,7 +523,7 @@ if [[ ! ${XCUT} ]] && [[ ! ${COMMAND} ]] && [[ ! -r "${SOURCE}" ]]; then
 fi
 
 # read input
-if [[ ${XCUT} ]]; then
+if [[ "${SOURCE}" == "xcut" ]]; then
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
 		INPUT="$(escape "$(get_from_clipboard)")"
 	else
@@ -540,13 +539,19 @@ if [[ ${XCUT} ]]; then
 		echo "of xclip." 1>&2
 		exit 1
 	fi
-elif [[ ${COMMAND} ]]; then
+elif [[ "${SOURCE}" == "command" ]]; then
 	if [[ ${UID} == 0 ]]; then
 		PS1="#"
 	else
 		PS1="$"
 	fi
-	INPUT="$(escape "${PS1} ${SOURCE}"$'\n'"$(bash -c "${SOURCE}" 2>&1)")"
+	DESCRIPTION="${PS1}"
+	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
+		DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
+		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n'
+	done
+	DESCRIPTION="$(escape "${DESCRIPTION}")"
+	INPUT="$(escape "${INPUT}")"
 else
 	INPUT="$(escape "$( < "${SOURCE}" )")"
 fi
