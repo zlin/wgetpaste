@@ -65,8 +65,8 @@ DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
 DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
 DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
-# setting DEFAULT_EXPIRATION_${SERVICE} can be used to override for services where the general
-# default is unavailable.
+# setting e.g. DEFAULT_EXPIRATION_${SERVICE} can be used to override the default setting for
+# just one service
 
 ### usage
 
@@ -96,7 +96,7 @@ show_usage() {
 	echo "    -h, --help                    show this help"
 	echo "        --version                 show version information"
 	echo
-	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION,EXPIRATION_\${SERVICE}}) can be"
+	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be"
 	echo "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
 }
 
@@ -500,6 +500,7 @@ done
 
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
+[[ -n "$(eval "echo \${DEFAULT_NICK_${SERVICE}}")" ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
 SOURCE="${SOURCE:-/dev/stdin}"
 CVT_TABS="No"
@@ -511,6 +512,7 @@ CVT_TABS="No"
 [[ ${LIST_EXPIRATION} ]] && show_expiration_options && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
+[[ -n "$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")" ]] && LANGUAGE="${LANGUAGE:-$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")}"
 LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
 # uses ${SERVICE} and ${LANGUAGE}. may change the value of the latter.
 verify_language
