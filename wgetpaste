@@ -548,7 +548,7 @@ elif [[ "${SOURCE}" == "command" ]]; then
 	DESCRIPTION="${PS1}"
 	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
 		DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
-		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n'
+		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
 	done
 	DESCRIPTION="$(escape "${DESCRIPTION}")"
 	INPUT="$(escape "${INPUT}")"
