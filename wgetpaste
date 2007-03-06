@@ -31,6 +31,14 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
+get_ps1() {
+	if [[ ${UID} == 0 ]]; then
+		echo "#"
+	else
+		echo "$"
+	fi
+}
+
 show_url() {
 	# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
 	# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
@@ -77,6 +85,8 @@ show_usage() {
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
 	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
+	echo "    -i, --info                    append the output of \`emerge --info\`"
+	echo "    -I, --info-only               paste the output of \`emerge --info\` only"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
 	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
@@ -380,12 +390,12 @@ while [[ ! -z "${1}" ]]; do
 		;;
 		--description=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		DESCRIPTION="$(escape "${1#*=}")"
+		DESCRIPTION="${1#*=}"
 		shift
 		;;
 		-d | --description )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
-		DESCRIPTION="$(escape "${2}")"
+		DESCRIPTION="${2}"
 		shift 2
 		;;
 		--expiration=* )
@@ -407,6 +417,14 @@ while [[ ! -z "${1}" ]]; do
 		-h | --help )
 		show_usage
 		exit 0
+		;;
+		-i | --info )
+		INFO=true
+		shift
+		;;
+		-I | --info-only )
+		SOURCE="info"
+		shift
 		;;
 		--language=* )
 		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
@@ -509,13 +527,22 @@ EXPIRATION="$(escape "${EXPIRATION}")"
 if [[ -z "${DESCRIPTION}" ]]; then
 	if [[ "${SOURCE}" == "/dev/stdin" ]]; then
 		DESCRIPTION="stdin"
+	elif [[ "${SOURCE}" == "info" ]]; then
+		PS1="$(get_ps1)"
+		DESCRIPTION="${PS1} emerge --info"
+	elif [[ "${SOURCE}" == "command" ]]; then
+		PS1="$(get_ps1)"
+		DESCRIPTION="${PS1}"
+		for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
+			DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
+		done
 	else
-		DESCRIPTION="$(escape "${SOURCE}")"
+		DESCRIPTION="${SOURCE}"
 	fi
 fi
 
 # handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ "${SOURCE}" != "xcut" ]] && [[ "${SOURCE}" != "command" ]] && [[ ! -r "${SOURCE}" ]]; then
+if [[ "${SOURCE}" != "command" ]] && [[ "${SOURCE}" != "info" ]] && [[ "${SOURCE}" != "xcut" ]] && [[ ! -r "${SOURCE}" ]]; then
 	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
 	echo 1>&2
 	show_usage 1>&2
@@ -523,9 +550,17 @@ if [[ "${SOURCE}" != "xcut" ]] && [[ "${SOURCE}" != "command" ]] && [[ ! -r "${S
 fi
 
 # read input
-if [[ "${SOURCE}" == "xcut" ]]; then
+if [[ "${SOURCE}" == "command" ]]; then
+	PS1="$(get_ps1)"
+	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
+		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
+	done
+elif [[ "${SOURCE}" == "info" ]]; then
+	PS1="$(get_ps1)"
+	INPUT="${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+elif [[ "${SOURCE}" == "xcut" ]]; then
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
-		INPUT="$(escape "$(get_from_clipboard)")"
+		INPUT="$(get_from_clipboard)"
 	else
 		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" 1>&2
 		echo "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
@@ -539,23 +574,21 @@ if [[ "${SOURCE}" == "xcut" ]]; then
 		echo "of xclip." 1>&2
 		exit 1
 	fi
-elif [[ "${SOURCE}" == "command" ]]; then
-	if [[ ${UID} == 0 ]]; then
-		PS1="#"
-	else
-		PS1="$"
-	fi
-	DESCRIPTION="${PS1}"
-	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
-		DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
-		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
-	done
-	DESCRIPTION="$(escape "${DESCRIPTION}")"
-	INPUT="$(escape "${INPUT}")"
 else
-	INPUT="$(escape "$( < "${SOURCE}" )")"
+	INPUT="$( < "${SOURCE}" )"
 fi
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
+
+# append emerge --info if needed
+if [[ ${INFO} ]]; then
+	PS1="$(get_ps1)"
+	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info"
+	INPUT="${INPUT}"$'\n'"${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+fi
+
+# escape DESCRIPTION and INPUT
+DESCRIPTION="$(escape "${DESCRIPTION}")"
+INPUT="$(escape "${INPUT}")"
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
 SIZE=$(echo "${INPUT}" | wc -c)
