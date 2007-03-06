@@ -546,7 +546,7 @@ elif [[ ${COMMAND} ]]; then
 	else
 		PS1="$"
 	fi
-	INPUT="$(escape "${PS1} ${SOURCE}"$'\n'"$(${SOURCE})")"
+	INPUT="$(escape "${PS1} ${SOURCE}"$'\n'"$(${SOURCE} 2>&1)")"
 else
 	INPUT="$(escape "$( < "${SOURCE}" )")"
 fi
