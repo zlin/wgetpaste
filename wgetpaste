@@ -31,14 +31,6 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
-get_ps1() {
-	if [[ ${UID} == 0 ]]; then
-		echo "#"
-	else
-		echo "$"
-	fi
-}
-
 show_url() {
 	# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
 	# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
@@ -241,14 +233,13 @@ verify_expiration_options() {
 
 # get the url to post to for any given service
 get_recipient() {
+	let "i = 0"
 	if [[ "${1}" == "raw" ]]; then
-		let "i = 0"
 		for service in ${SERVICES[*]}; do
 			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS_RAW[i]}" && return 0
 			let "i = i + 1"
 		done
 	else
-		let "i = 0"
 		for service in ${SERVICES[*]}; do
 			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS[i]}" && return 0
 			let "i = i + 1"
@@ -510,34 +501,41 @@ EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
 verify_expiration_options
 EXPIRATION="$(escape "${EXPIRATION}")"
 
+# set prompt
+if [[ ${UID} == 0 ]]; then
+	PS1="#"
+else
+	PS1="$"
+fi
+
 # set default description
 if [[ -z "${DESCRIPTION}" ]]; then
-	if [[ "${SOURCE}" == "/dev/stdin" ]]; then
+	case "${SOURCE}" in
+		/dev/stdin )
 		DESCRIPTION="stdin"
-	elif [[ "${SOURCE}" == "info" ]]; then
-		PS1="$(get_ps1)"
-		DESCRIPTION="${PS1} emerge --info"
-	elif [[ "${SOURCE}" == "command" ]]; then
-		PS1="$(get_ps1)"
+		;;
+		info )
+		DESCRIPTION="${PS1} emerge --info;"
+		;;
+		command )
 		DESCRIPTION="${PS1}"
 		for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
 			DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
 		done
-	else
+		;;
+		* )
 		DESCRIPTION="${SOURCE}"
-	fi
+	esac
 fi
 
 # read input
 case "${SOURCE}" in
 	command )
-	PS1="$(get_ps1)"
 	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
 		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
 	done
 	;;
 	info )
-	PS1="$(get_ps1)"
 	INPUT="${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
 	;;
 	xcut )
@@ -572,7 +570,6 @@ esac
 
 # append emerge --info if needed
 if [[ ${INFO} ]]; then
-	PS1="$(get_ps1)"
 	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info;"
 	INPUT="${INPUT}"$'\n'"${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
 fi
