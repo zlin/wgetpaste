@@ -588,7 +588,7 @@ esac
 # append emerge --info if needed
 if [[ ${INFO} ]]; then
 	PS1="$(get_ps1)"
-	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info"
+	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info;"
 	INPUT="${INPUT}"$'\n'"${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
 fi
 
