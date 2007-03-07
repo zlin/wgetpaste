@@ -367,16 +367,29 @@ convert_to_raw() {
 
 ### read cli options
 
+# convert groups of short options to singular short options. convert long options to short options.
+for arg in "${@}"; do
+	if [[ "${arg}" =~ ^--.*= ]]; then
+		ARGS[${#ARGS[*]}]="${arg%=*}"
+		ARGS[${#ARGS[*]}]="${arg#*=}"
+	elif [[ "${arg}" =~ ^-- ]]; then
+		ARGS[${#ARGS[*]}]="${arg}"
+	elif [[ "${arg}" =~ ^- ]]; then
+		for short_arg in $(echo "${arg#-}" | sed 's|.| -&|g'); do
+			ARGS[${#ARGS[*]}]="${short_arg}"
+		done
+	else
+		ARGS[${#ARGS[*]}]="${arg}"
+	fi
+done
+
+# set the converted options as input
+set -- "${ARGS[@]}"
+
 # if you know a better option (like getopts) which provides the same features
 # please let me know how.
 while [[ ! -z "${1}" ]]; do
 	case "${1}" in
-		--command=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		SOURCE="command"
-		COMMANDS[${#COMMANDS[*]}]="${1#*=}"
-		shift
-		;;
 		-c | --command )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
 		SOURCE="command"
@@ -388,21 +401,10 @@ while [[ ! -z "${1}" ]]; do
 		set -x
 		shift
 		;;
-		--description=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		DESCRIPTION="${1#*=}"
-		shift
-		;;
 		-d | --description )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
 		DESCRIPTION="${2}"
 		shift 2
-		;;
-		--expiration=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		EXPIRATION_SET=true
-		EXPIRATION="${1#*=}"
-		shift
 		;;
 		-e | --expiration )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
@@ -426,12 +428,6 @@ while [[ ! -z "${1}" ]]; do
 		SOURCE="info"
 		shift
 		;;
-		--language=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		LANGUAGE_SET=true
-		LANGUAGE="${1#*=}"
-		shift
-		;;
 		-l | --language )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
 		LANGUAGE_SET=true
@@ -442,11 +438,6 @@ while [[ ! -z "${1}" ]]; do
 		LIST_LANGUAGES=true
 		shift
 		;;
-		--nick=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		NICK="$(escape "${1#*=}")"
-		shift
-		;;
 		-n | --nick )
 		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
 		NICK="$(escape "${2}")"
@@ -454,12 +445,6 @@ while [[ ! -z "${1}" ]]; do
 		;;
 		-r | --raw )
 		RAW=true
-		shift
-		;;
-		--service=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		verify_service "${1#*=}"
-		SERVICE="$(escape "${1#*=}")"
 		shift
 		;;
 		-s | --service )
