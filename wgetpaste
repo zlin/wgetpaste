@@ -111,6 +111,29 @@ verify_service() {
 	fail "$*" "service" "show_services"
 }
 
+show() {
+	for var in $(eval "echo \${${SERVICE}_${1}[*]}"); do
+		echo "    ${var//_/ }"
+	done
+}
+
+verify() {
+	for ((i=0; i<$(eval echo \${#${SERVICE}_${1}S[*]}); i++)); do
+		if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]//_/ }")" ]]; then
+			case "${2}" in
+				count )
+				eval "${1}=\"${i}\""
+				;;
+				value )
+				eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
+				;;
+			esac
+			return 0
+		fi
+	done
+	return 1
+}
+
 ### languages
 
 # rafb
@@ -134,9 +157,7 @@ show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
 		ca | osl | rafb )
-		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
-			echo "    ${language//_/ }"
-		done | sort
+		show LANGUAGES | sort
 		;;
 		* )
 		echo 1>&2
@@ -148,19 +169,13 @@ show_languages() {
 verify_language() {
 	case "${SERVICE}" in
 		ca )
-		for ((i=0; i<${#ca_LANGUAGES[*]}; i++)); do
-			[[ "${LANGUAGE}" == "${ca_LANGUAGES[i]//_/ }" ]] && LANGUAGE="${i}" && return 0
-		done
+		verify LANGUAGE count && return 0
 		;;
 		rafb )
-		for language in ${rafb_LANGUAGES[*]}; do
-			[[ "${LANGUAGE}" == "${language//_/ }" ]] && return 0
-		done
+		verify LANGUAGE && return 0
 		;;
 		osl )
-		for ((i=0; i<${#osl_LANGUAGES[*]}; i++)); do
-			[[ "${LANGUAGE}" == "${osl_LANGUAGES[i]//_/ }" ]] && LANGUAGE="${osl_LANGUAGE_VALUES[i]}" && return 0
-		done
+		verify LANGUAGE value && return 0
 		;;
 		* )
 		[[ ! ${LANGUAGE_SET} ]] && return 0
@@ -172,20 +187,18 @@ verify_language() {
 ### expiration
 
 # ca
-ca_EXPIRATION_OPTIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours \
-4_hours 8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months \
-4_months 5_months 6_months 1_year)
+ca_EXPIRATIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours 4_hours \
+8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months 4_months \
+5_months 6_months 1_year)
 # osl - ordering for options and values must be the same
-osl_EXPIRATION_OPTIONS=(Never 1_day 1_month)
+osl_EXPIRATIONS=(Never 1_day 1_month)
 osl_EXPIRATION_VALUES=(f d m)
 
 show_expiration_options() {
 	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
 	case "${SERVICE}" in
 		ca | osl )
-		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
-			echo "    ${expiration//_/ }"
-		done
+		show EXPIRATIONS
 		;;
 		rafb )
 		echo 1>&2
@@ -202,14 +215,10 @@ show_expiration_options() {
 verify_expiration_options() {
 	case "${SERVICE}" in
 		ca )
-		for expiration in ${ca_EXPIRATION_OPTIONS[*]}; do
-			[[ "${EXPIRATION}" == "${expiration//_/ }" ]] && return 0
-		done
+		verify EXPIRATION && return 0
 		;;
 		osl )
-		for ((i=0; i<${#osl_EXPIRATION_OPTIONS[*]}; i++)); do
-			[[ "${EXPIRATION}" == "${osl_EXPIRATION_OPTIONS[i]//_/ }" ]] && EXPIRATION="${osl_EXPIRATION_VALUES[i]}" && return 0
-		done
+		verify EXPIRATION value && return 0
 		;;
 		* )
 		[[ ! ${EXPIRATION_SET} ]] && return 0 
