@@ -369,7 +369,8 @@ no_argument() {
 
 get_filename() {
 	if [[ -f "${1}" ]]; then
-		SOURCE="${1}"
+		SOURCE="files"
+		FILES[${#FILES[*]}]="${1}"
 	else
 		echo "${0}: ${1}: No such file found. " 1>&2
 		exit 1
@@ -471,7 +472,7 @@ done
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
 [[ -n "$(eval "echo \${DEFAULT_NICK_${SERVICE}}")" ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
-SOURCE="${SOURCE:-/dev/stdin}"
+[[ -z "${SOURCE}" ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS="No"
 
 # show languages if requested (needs to be done after the right service is selected)
@@ -504,9 +505,6 @@ fi
 # set default description
 if [[ -z "${DESCRIPTION}" ]]; then
 	case "${SOURCE}" in
-		/dev/stdin )
-		DESCRIPTION="stdin"
-		;;
 		info )
 		DESCRIPTION="${PS1} emerge --info;"
 		;;
@@ -516,8 +514,12 @@ if [[ -z "${DESCRIPTION}" ]]; then
 			DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
 		done
 		;;
+		files )
+		DESCRIPTION="${FILES[*]}"
+		;;
 		* )
 		DESCRIPTION="${SOURCE}"
+		;;
 	esac
 fi
 
@@ -546,13 +548,20 @@ case "${SOURCE}" in
 		exit 1
 	fi
 	;;
-	* )
+	stdin | files )
 	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-	if [[ ! -r "${SOURCE}" ]]; then
-		echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
-		exit 1
+	if [[ ${#FILES[*]} -gt 1 ]]; then
+		for ((i=0; i<${#FILES[*]}; i++)); do
+			file="${FILES[i]}"
+			if [[ ! -r "${file}" ]]; then
+				echo "The input source: \"${file}\" is not readable. Please specify a readable input source." 1>&2
+				exit 1
+			fi
+			INPUT="${INPUT}${PS1} cat ${file}"$'\n'"$( < "${file}" )"$'\n\n'
+		done
+	else
+		INPUT="$( < "${FILES}" )"
 	fi
-	INPUT="$( < "${SOURCE}" )"
 	;;
 esac
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
