@@ -58,7 +58,6 @@ DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
 ### usage
 
 show_usage() {
-	[[ -n "$*" ]] && echo "$*"
 	echo "Usage: ${0} [options] [file]"
 	echo
 	echo "Options:"
@@ -86,7 +85,6 @@ show_usage() {
 	echo
 	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be"
 	echo "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
-	[[ -n "$*" ]] && exit 1
 }
 
 ### services
@@ -364,12 +362,24 @@ done
 # set the converted options as input
 set -- "${ARGS[@]}"
 
-# if you know a better option (like getopts) which provides the same features
-# please let me know how.
+no_argument() {
+	echo "${0}: option requires an argument ${1}" 1>&2
+	exit 1
+}
+
+get_filename() {
+	if [[ -f "${1}" ]]; then
+		SOURCE="${1}"
+	else
+		echo "${0}: ${1}: No such file found. " 1>&2
+		exit 1
+	fi
+}
+
 while [[ ! -z "${1}" ]]; do
 	case "${1}" in
 		-c | --command )
-		[[ -z "${2}" ]] && show_usage "${0}: option requires an argument -- c" 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="${2}"
 		shift 2
@@ -380,12 +390,12 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-d | --description )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		DESCRIPTION="${2}"
 		shift 2
 		;;
 		-e | --expiration )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		EXPIRATION_SET=true
 		EXPIRATION="${2}"
 		shift 2
@@ -395,8 +405,7 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-h | --help )
-		show_usage
-		exit 0
+		show_usage && exit 0
 		;;
 		-i | --info )
 		INFO=true
@@ -407,7 +416,7 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-l | --language )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		LANGUAGE_SET=true
 		LANGUAGE="${2}"
 		shift 2
@@ -417,7 +426,7 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-n | --nick )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
@@ -426,7 +435,7 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-s | --service )
-		[[ -z "${2}" ]] && show_usage "${BASENAME}: option requires an argument -- s" 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		verify_service "${2}"
 		SERVICE="$(escape "${2}")"
 		shift 2
@@ -448,22 +457,10 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-- )
-		if [[ -f "${2}" ]]; then
-			SOURCE="${2}"
-			break
-		else
-			show_usage 1>&2
-			exit 1
-		fi
+		get_filename "${2}" && break
 		;;
 		*)
-		if [[ -f "${1}" ]]; then
-			SOURCE="${1}"
-			shift
-		else
-			echo "${0}: ${1}: No such file found. " 1>&2
-			exit 1
-		fi
+		get_filename "${1}" && shift
 		;;
 	esac
 done
