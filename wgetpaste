@@ -368,13 +368,15 @@ no_argument() {
 }
 
 get_filename() {
-	if [[ -f "${1}" ]]; then
-		SOURCE="files"
-		FILES[${#FILES[*]}]="${1}"
-	else
-		echo "${0}: ${1}: No such file found. " 1>&2
-		exit 1
-	fi
+	for ((i=0; i<${#}; i++)); do
+		if [[ -f "${1}" ]]; then
+			SOURCE="files"
+			FILES[${#FILES[*]}]="${1}"
+		else
+			echo "${0}: ${1}: No such file found. " 1>&2
+			exit 1
+		fi
+	done
 }
 
 while [[ ! -z "${1}" ]]; do
@@ -458,7 +460,7 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-- )
-		get_filename "${2}" && break
+		shift && get_filename "${@}" && break
 		;;
 		*)
 		get_filename "${1}" && shift
