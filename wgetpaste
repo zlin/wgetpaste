@@ -232,8 +232,7 @@ get_recipient() {
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
 		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"\${SERVICE_URLS${1}[i]}\"" && return 0
 	done
-	echo "Failed to get url for \"${SERVICE}\"." 1>&2
-	exit 1
+	die "Failed to get url for \"${SERVICE}\"."
 }
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
@@ -272,8 +271,7 @@ post_data() {
 		echo "poster=${NICK}&code=${INPUT}"
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
@@ -288,8 +286,7 @@ need_stdout() {
 		return 1
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
@@ -304,8 +301,7 @@ get_url() {
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
@@ -313,8 +309,7 @@ get_url() {
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
 	if [[ "${SERVICE}" == "rafb" ]] && [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
-		echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds." 1>&2
-		exit 1
+		die "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
 	fi
 }
 
@@ -341,30 +336,37 @@ convert_to_raw() {
 ### read cli options
 
 # convert groups of short options to singular short options. convert long options to short options.
-for arg in "${@}"; do
-	if [[ "${arg}" == "--" ]]; then
-		STOP=true
-		ARGS[${#ARGS[*]}]="${arg}"
-	elif [[ "${arg}" == --*=* ]]; then
-		ARGS[${#ARGS[*]}]="${arg%=*}"
-		ARGS[${#ARGS[*]}]="${arg#*=}"
-	elif [[ "${arg}" == --* ]]; then
-		ARGS[${#ARGS[*]}]="${arg}"
-	elif [[ "${arg}" == -* ]] && [[ ! ${STOP} ]]; then
-		for short_arg in $(echo "${arg#-}" | sed 's|.| -&|g'); do
+while [[ -n "${1}" ]]; do
+	case "${1}" in
+		-- )
+		for arg in "${@}"; do
+			ARGS[${#ARGS[*]}]="${arg}"
+		done
+		break
+		;;
+		--*=* )
+		ARGS[${#ARGS[*]}]="${1%=*}"
+		ARGS[${#ARGS[*]}]="${1#*=}"
+		;;
+		--* )
+		ARGS[${#ARGS[*]}]="${1}"
+		;;
+		-* )
+		for short_arg in $(echo "${1#-}" | sed 's|.| -&|g'); do
 			ARGS[${#ARGS[*]}]="${short_arg}"
 		done
-	else
-		ARGS[${#ARGS[*]}]="${arg}"
-	fi
+		;;
+		* )
+		ARGS[${#ARGS[*]}]="${1}"
+	esac
+	shift
 done
 
 # set the converted options as input
 set -- "${ARGS[@]}"
 
 no_argument() {
-	echo "${0}: option requires an argument ${1}" 1>&2
-	exit 1
+	die "${0}: option requires an argument ${1}"
 }
 
 get_filename() {
@@ -373,8 +375,7 @@ get_filename() {
 			SOURCE="files"
 			FILES[${#FILES[*]}]="${1}"
 		else
-			echo "${0}: ${1}: No such file found. " 1>&2
-			exit 1
+			die "${0}: ${1}: No such file found. "
 		fi
 	done
 }
@@ -444,16 +445,14 @@ while [[ ! -z "${1}" ]]; do
 		shift 2
 		;;
 		-S | --list-services )
-		show_services
-		exit 0
+		show_services && exit 0
 		;;
 		-v | --verbose )
 		VERBOSE=true
 		shift
 		;;
 		--version )
-		echo "${0}, version ${VERSION}"
-		exit 0
+		echo "${0}, version ${VERSION}" && exit 0
 		;;
 		-x | --xcut )
 		SOURCE="xcut"
@@ -556,8 +555,7 @@ case "${SOURCE}" in
 		for ((i=0; i<${#FILES[*]}; i++)); do
 			file="${FILES[i]}"
 			if [[ ! -r "${file}" ]]; then
-				echo "The input source: \"${file}\" is not readable. Please specify a readable input source." 1>&2
-				exit 1
+				die "The input source: \"${file}\" is not readable. Please specify a readable input source."
 			fi
 			INPUT="${INPUT}${PS1} cat ${file}"$'\n'"$( < "${file}" )"$'\n\n'
 		done
@@ -624,12 +622,11 @@ verify_url
 # handle the case when there was no location returned
 if [[ -z "${URL}" ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
-		echo "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}" 1>&2
+		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
 		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" 1>&2
-		echo "--debug to get the output from wget that can help diagnose it correctly." 1>&2
+		die "--debug to get the output from wget that can help diagnose it correctly."
 	fi
-	exit 1
 fi
 
 # convert_to_raw() may change the value of RAW. Otherwise it set RAW_URL.
