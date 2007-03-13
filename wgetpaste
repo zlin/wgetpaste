@@ -44,7 +44,7 @@ show_url() {
 # the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
 # whatever your window manager provides for adding it to your clipboard.
 #
-# Likewise if get_from_clipboard() is defined as a funcion in one of those files it will be
+# Likewise if get_from_clipboard() is defined as a function in one of those files it will be
 # called to retrieve input from your clipboard when --xcut is used.
 [[ -f /etc/wgetpaste ]] && . /etc/wgetpaste
 [[ -f ~/.wgetpaste ]] && . ~/.wgetpaste
@@ -139,13 +139,13 @@ rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB 
 # ca - ordering is important here as their value is set as their number in the order
 ca_LANGUAGES=(Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
 mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_\(NASM\) ASP Bash CSS \
-Delphi HTML_6\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
+Delphi HTML_4\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
 # osl - ordering for languages and values must be the same
 osl_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
 ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game_Maker HTML INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM MySQL \
-NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
-QBasic\/QuickBASIC Robots Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
+FreeBasic Game_Maker HTML_4\.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
+MySQL NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
+QBasic Robots\.txt Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
 osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_mac caddcl \
 cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
 javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
@@ -549,7 +549,7 @@ case "${SOURCE}" in
 		exit 1
 	fi
 	;;
-	stdin | files )
+	files | stdin )
 	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
 	if [[ ${#FILES[*]} -gt 1 ]]; then
 		for ((i=0; i<${#FILES[*]}; i++)); do
