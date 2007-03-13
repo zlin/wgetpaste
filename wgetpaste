@@ -32,24 +32,19 @@ escape() {
 }	
 
 show_url() {
-	# add_to_clipboard() may be defined in /etc/wgetpaste or ~/.wgetpaste and can be used to add
-	# ${URL} to your clipboard using xclip, xcut, klipper or whatever your window manager provides
-	# for that task.
 	[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${1}"
-
 	echo "Your ${2}paste can be seen here: ${1}"
 }
 
 ### defaults
 
 # The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
-# Only those four variables should be set in those files.
 #
 # If add_to_clipboard() is defined as a function in one of those files it will be called with
 # the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
 # whatever your window manager provides for adding it to your clipboard.
 #
-# Likewise if get_from_clipboard() is defined as a funciont in one of those files it will be
+# Likewise if get_from_clipboard() is defined as a funcion in one of those files it will be
 # called to retrieve input from your clipboard when --xcut is used.
 [[ -f /etc/wgetpaste ]] && . /etc/wgetpaste
 [[ -f ~/.wgetpaste ]] && . ~/.wgetpaste
@@ -57,13 +52,13 @@ DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
 DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
 DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
-# setting DEFAULT_EXPIRATION_${SERVICE} can be used to override for services where the general
-# default is unavailable.
+# setting e.g. DEFAULT_EXPIRATION_${SERVICE} can be used to override the default setting for
+# just one service
 
 ### usage
 
 show_usage() {
-	echo "Usage: $0 [options] [file]"
+	echo "Usage: ${0} [options] [file]"
 	echo
 	echo "Options:"
 	echo "    -l, --language LANG           set language (defaults to \"${DEFAULT_LANGUAGE}\")"
@@ -76,16 +71,19 @@ show_usage() {
 	echo "    -L, --list-languages          list languages supported by the specified service"
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
-	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
+	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
+	echo "    -i, --info                    append the output of \`emerge --info\`"
+	echo "    -I, --info-only               paste the output of \`emerge --info\` only"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
+	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
 	echo "    -v, --verbose                 show wget stderr output if no url is received"
 	echo "        --debug                   be *very* verbose (implies -v)"
 	echo
 	echo "    -h, --help                    show this help"
 	echo "        --version                 show version information"
 	echo
-	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION,EXPIRATION_\${SERVICE}}) can be"
+	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be"
 	echo "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
 }
 
@@ -99,10 +97,8 @@ INDENTATION=10
 
 show_services() {
 	echo 'Services supported (case sensitive):'
-	let "i = 0"
-	for service in ${SERVICES[*]}; do
-		echo "    ${service} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
-		let "i = i + 1"
+	for ((i=0; i<${#SERVICES[*]}; i++)); do
+		echo "    ${SERVICES[i]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
 	done
 }
 
@@ -111,6 +107,29 @@ verify_service() {
 		[[ "$*" == "${service}" ]] && return 0
 	done
 	fail "$*" "service" "show_services"
+}
+
+show() {
+	for var in $(eval "echo \${${SERVICE}_${1}[*]}"); do
+		echo "    ${var//_/ }"
+	done
+}
+
+verify() {
+	for ((i=0; i<$(eval echo \${#${SERVICE}_${1}S[*]}); i++)); do
+		if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]//_/ }")" ]]; then
+			case "${2}" in
+				count )
+				eval "${1}=\"${i}\""
+				;;
+				value )
+				eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
+				;;
+			esac
+			return 0
+		fi
+	done
+	return 1
 }
 
 ### languages
@@ -136,9 +155,7 @@ show_languages() {
 	echo "Languages supported by ${SERVICE}: $(get_recipient) (case sensitive):"
 	case "${SERVICE}" in
 		ca | osl | rafb )
-		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
-			echo "    ${language//_/ }"
-		done | sort
+		show LANGUAGES | sort
 		;;
 		* )
 		echo 1>&2
@@ -150,23 +167,13 @@ show_languages() {
 verify_language() {
 	case "${SERVICE}" in
 		ca )
-		let "i = 0"
-		for language in ${ca_LANGUAGES[*]}; do
-			let "i = i +1"
-			[[ "${LANGUAGE}" == "${language//_/ }" ]] && LANGUAGE="${i}" && return 0
-		done
+		verify LANGUAGE count && return 0
 		;;
 		rafb )
-		for language in ${rafb_LANGUAGES[*]}; do
-			[[ "${LANGUAGE}" == "${language//_/ }" ]] && return 0
-		done
+		verify LANGUAGE && return 0
 		;;
 		osl )
-		let "i = 0"
-		for language in $(eval "echo \${${SERVICE}_LANGUAGES[*]}"); do
-			[[ "${LANGUAGE}" == "${language//_/ }" ]] && LANGUAGE="$(eval "echo \${${SERVICE}_LANGUAGE_VALUES[i]}")" && return 0
-			let "i = i + 1"
-		done
+		verify LANGUAGE value && return 0
 		;;
 		* )
 		[[ ! ${LANGUAGE_SET} ]] && return 0
@@ -178,20 +185,18 @@ verify_language() {
 ### expiration
 
 # ca
-ca_EXPIRATION_OPTIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours \
-4_hours 8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months \
-4_months 5_months 6_months 1_year)
+ca_EXPIRATIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours 4_hours \
+8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months 4_months \
+5_months 6_months 1_year)
 # osl - ordering for options and values must be the same
-osl_EXPIRATION_OPTIONS=(Never 1_day 1_month)
+osl_EXPIRATIONS=(Never 1_day 1_month)
 osl_EXPIRATION_VALUES=(f d m)
 
 show_expiration_options() {
 	echo "Expiration options supported by ${SERVICE}: $(get_recipient) (case sensisitive):"
 	case "${SERVICE}" in
 		ca | osl )
-		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
-			echo "    ${expiration//_/ }"
-		done
+		show EXPIRATIONS
 		;;
 		rafb )
 		echo 1>&2
@@ -208,16 +213,10 @@ show_expiration_options() {
 verify_expiration_options() {
 	case "${SERVICE}" in
 		ca )
-		for expiration in ${ca_EXPIRATION_OPTIONS[*]}; do
-			[[ "${EXPIRATION}" == "${expiration//_/ }" ]] && return 0
-		done
+		verify EXPIRATION && return 0
 		;;
 		osl )
-		let "i = 0"
-		for expiration in $(eval "echo \${${SERVICE}_EXPIRATION_OPTIONS[*]}"); do
-			[[ "${EXPIRATION}" == "${expiration//_/ }" ]] && EXPIRATION="$(eval "echo \${${SERVICE}_EXPIRATION_VALUES[i]}")" && return 0
-			let "i = i + 1"
-		done
+		verify EXPIRATION value && return 0
 		;;
 		* )
 		[[ ! ${EXPIRATION_SET} ]] && return 0 
@@ -230,38 +229,28 @@ verify_expiration_options() {
 
 # get the url to post to for any given service
 get_recipient() {
-	if [[ "${1}" == "raw" ]]; then
-		let "i = 0"
-		for service in ${SERVICES[*]}; do
-			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS_RAW[i]}" && return 0
-			let "i = i + 1"
-		done
-	else
-		let "i = 0"
-		for service in ${SERVICES[*]}; do
-			[[ "${SERVICE}" == "${service}" ]] && echo "${SERVICE_URLS[i]}" && return 0
-			let "i = i + 1"
-		done
-	fi
-	echo "Failed to get url for \"${SERVICE}\"." 1>&2
-	exit 1
+	for ((i=0; i<${#SERVICES[*]}; i++)); do
+		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"\${SERVICE_URLS${1}[i]}\"" && return 0
+	done
+	die "Failed to get url for \"${SERVICE}\"."
 }
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
-# service in that regard. for now no warning will be printed for that. note that this is only a warning printed.
-# it doesn't abort or anything.
+# service in that regard. note that this is only a warning printed. it doesn't abort or anything.
 warn_size() {
-	print_warning() {
-		echo "Pasting > ${1} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
-		echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+	warn() {
+		if [[ ${SIZE} -gt ${1} ]]; then
+			echo "Pasting > ${2} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
+			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+		fi
 	}
 
 	case "${SERVICE}" in
 		rafb )
-		[[ ${SIZE} -gt 512000 ]] && print_warning "512 kb"
+		warn 512000 "512 kb"
 		;;
 		ca )
-		[[ ${SIZE} -gt 1024000 ]] && print_warning "1 MB"
+		warn 1024000 "1 MB"
 		;;
 	esac
 }
@@ -282,8 +271,7 @@ post_data() {
 		echo "poster=${NICK}&code=${INPUT}"
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
@@ -291,17 +279,14 @@ post_data() {
 # indicate if ${SERVICE} needs stdout output from wget to get the resulting url
 need_stdout() {
 	case "${SERVICE}" in
-		# this service needs to use a regex to retrieve the url from stdout
 		ca )
 		return 0
 		;;
-		# these services read the reply from Location: which goes to stderr
 		osl | rafb | sh )
 		return 1
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
@@ -316,22 +301,16 @@ get_url() {
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 		;;
 		* )
-		echo "\"${SERVICE}\" is not supported by ${FUNCNAME}()." 1>&2
-		exit 1
+		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 		;;
 	esac
 }
 
-# verify that the pastebin service didn't return a known error url such as toofast.html from rafb
+# verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
-	case "${SERVICE}" in
-		rafb )
-		if [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
-			echo "You must wait at least 10 seconds between each paste! Try again in 10 seconds." 1>&2
-			exit 1
-		fi
-		;;
-	esac
+	if [[ "${SERVICE}" == "rafb" ]] && [[ "${URL}" == "http://rafb.net/p/toofast.html" ]]; then
+		die "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
+	fi
 }
 
 # if possible convert URL to raw
@@ -356,33 +335,71 @@ convert_to_raw() {
 
 ### read cli options
 
-# if you know a better option (like getopts) which provides the same features
-# please let me know how.
+# convert groups of short options to singular short options. convert long options to short options.
+while [[ -n "${1}" ]]; do
+	case "${1}" in
+		-- )
+		for arg in "${@}"; do
+			ARGS[${#ARGS[*]}]="${arg}"
+		done
+		break
+		;;
+		--*=* )
+		ARGS[${#ARGS[*]}]="${1%=*}"
+		ARGS[${#ARGS[*]}]="${1#*=}"
+		;;
+		--* )
+		ARGS[${#ARGS[*]}]="${1}"
+		;;
+		-* )
+		for short_arg in $(echo "${1#-}" | sed 's|.| -&|g'); do
+			ARGS[${#ARGS[*]}]="${short_arg}"
+		done
+		;;
+		* )
+		ARGS[${#ARGS[*]}]="${1}"
+	esac
+	shift
+done
+
+# set the converted options as input
+set -- "${ARGS[@]}"
+
+no_argument() {
+	die "${0}: option requires an argument ${1}"
+}
+
+get_filename() {
+	for ((i=0; i<${#}; i++)); do
+		if [[ -f "${1}" ]]; then
+			SOURCE="files"
+			FILES[${#FILES[*]}]="${1}"
+		else
+			die "${0}: ${1}: No such file found. "
+		fi
+	done
+}
+
 while [[ ! -z "${1}" ]]; do
 	case "${1}" in
+		-c | --command )
+		[[ -z "${2}" ]] && no_argument "${1}"
+		SOURCE="command"
+		COMMANDS[${#COMMANDS[*]}]="${2}"
+		shift 2
+		;;
 		--debug )
 		DEBUG=true
 		set -x
 		shift
 		;;
-		--description=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		DESCRIPTION="$(escape "${1#*=}")"
-		shift
-		;;
 		-d | --description )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
-		DESCRIPTION="$(escape "${2}")"
+		[[ -z "${2}" ]] && no_argument "${1}"
+		DESCRIPTION="${2}"
 		shift 2
 		;;
-		--expiration=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		EXPIRATION_SET=true
-		EXPIRATION="${1#*=}"
-		shift
-		;;
 		-e | --expiration )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		EXPIRATION_SET=true
 		EXPIRATION="${2}"
 		shift 2
@@ -392,17 +409,18 @@ while [[ ! -z "${1}" ]]; do
 		shift
 		;;
 		-h | --help )
-		show_usage
-		exit 0
+		show_usage && exit 0
 		;;
-		--language=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		LANGUAGE_SET=true
-		LANGUAGE="${1#*=}"
+		-i | --info )
+		INFO=true
+		shift
+		;;
+		-I | --info-only )
+		SOURCE="info"
 		shift
 		;;
 		-l | --language )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		LANGUAGE_SET=true
 		LANGUAGE="${2}"
 		shift 2
@@ -411,13 +429,8 @@ while [[ ! -z "${1}" ]]; do
 		LIST_LANGUAGES=true
 		shift
 		;;
-		--nick=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		NICK="$(escape "${1#*=}")"
-		shift
-		;;
 		-n | --nick )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
@@ -425,43 +438,31 @@ while [[ ! -z "${1}" ]]; do
 		RAW=true
 		shift
 		;;
-		--service=* )
-		[[ -z "${1#*=}" ]] && show_usage 1>&2 && exit 1
-		verify_service "${1#*=}"
-		SERVICE="$(escape "${1#*=}")"
-		shift
-		;;
 		-s | --service )
-		[[ -z "${2}" ]] && show_usage 1>&2 && exit 1
+		[[ -z "${2}" ]] && no_argument "${1}"
 		verify_service "${2}"
 		SERVICE="$(escape "${2}")"
 		shift 2
 		;;
 		-S | --list-services )
-		show_services
-		exit 0
+		show_services && exit 0
 		;;
 		-v | --verbose )
 		VERBOSE=true
 		shift
 		;;
 		--version )
-		echo "$0, version ${VERSION}"
-		exit 0
+		echo "${0}, version ${VERSION}" && exit 0
 		;;
 		-x | --xcut )
-		XCUT=true
 		SOURCE="xcut"
 		shift
 		;;
+		-- )
+		shift && get_filename "${@}" && break
+		;;
 		*)
-		if [[ -f "${1}" ]]; then
-			SOURCE="${1}"
-			shift
-		else
-			show_usage 1>&2
-			exit 1
-		fi
+		get_filename "${1}" && shift
 		;;
 	esac
 done
@@ -470,8 +471,9 @@ done
 
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
+[[ -n "$(eval "echo \${DEFAULT_NICK_${SERVICE}}")" ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
-SOURCE="${SOURCE:-/dev/stdin}"
+[[ -z "${SOURCE}" ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS="No"
 
 # show languages if requested (needs to be done after the right service is selected)
@@ -481,6 +483,7 @@ CVT_TABS="No"
 [[ ${LIST_EXPIRATION} ]] && show_expiration_options && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
+[[ -n "$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")" ]] && LANGUAGE="${LANGUAGE:-$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")}"
 LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
 # uses ${SERVICE} and ${LANGUAGE}. may change the value of the latter.
 verify_language
@@ -493,44 +496,85 @@ EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
 verify_expiration_options
 EXPIRATION="$(escape "${EXPIRATION}")"
 
-# set default description
-if [[ -z "${DESCRIPTION}" ]]; then
-	if [[ "${SOURCE}" == "/dev/stdin" ]]; then
-		DESCRIPTION="stdin"
-	else
-		DESCRIPTION="$(escape "${SOURCE}")"
-	fi
+# set prompt
+if [[ ${UID} == 0 ]]; then
+	PS1="#"
+else
+	PS1="$"
 fi
 
-# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
-if [[ ! ${XCUT} ]] && [[ ! -r "${SOURCE}" ]]; then
-	echo "The input source: \"${SOURCE}\" is not readable. Please specify a readable input source." 1>&2
-	echo 1>&2
-	show_usage 1>&2
-	exit 1
+# set default description
+if [[ -z "${DESCRIPTION}" ]]; then
+	case "${SOURCE}" in
+		info )
+		DESCRIPTION="${PS1} emerge --info;"
+		;;
+		command )
+		DESCRIPTION="${PS1}"
+		for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
+			DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
+		done
+		;;
+		files )
+		DESCRIPTION="${FILES[*]}"
+		;;
+		* )
+		DESCRIPTION="${SOURCE}"
+		;;
+	esac
 fi
 
 # read input
-if [[ ${XCUT} ]]; then
+case "${SOURCE}" in
+	command )
+	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
+		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
+	done
+	;;
+	info )
+	INPUT="${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+	;;
+	xcut )
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
-		INPUT="$(escape "$(get_from_clipboard)")"
+		INPUT="$(get_from_clipboard)"
 	else
 		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" 1>&2
 		echo "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
-		echo 1>&2
-		echo -e "get_from_clipboard() {\n    xclip -o\n}\n" 1>&2
+		echo -e "\nget_from_clipboard() {\n    xclip -o\n}\n" 1>&2
 		echo "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" 1>&2
 		echo "define it like this:" 1>&2
-		echo 1>&2
-		echo -e "add_to_clipboard() {\n    xclip \"\$*\"\n}\n" 1>&2
+		echo -e "\nadd_to_clipboard() {\n    xclip \"\$*\"\n}\n" 1>&2
 		echo "You may use whatever your window manager provides to alter your clipboard instead" 1>&2
 		echo "of xclip." 1>&2
 		exit 1
 	fi
-else
-	INPUT="$(escape "$( < "${SOURCE}" )")"
-fi
+	;;
+	stdin | files )
+	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
+	if [[ ${#FILES[*]} -gt 1 ]]; then
+		for ((i=0; i<${#FILES[*]}; i++)); do
+			file="${FILES[i]}"
+			if [[ ! -r "${file}" ]]; then
+				die "The input source: \"${file}\" is not readable. Please specify a readable input source."
+			fi
+			INPUT="${INPUT}${PS1} cat ${file}"$'\n'"$( < "${file}" )"$'\n\n'
+		done
+	else
+		INPUT="$( < "${FILES}" )"
+	fi
+	;;
+esac
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
+
+# append emerge --info if needed
+if [[ ${INFO} ]]; then
+	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info;"
+	INPUT="${INPUT}"$'\n'"${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+fi
+
+# escape DESCRIPTION and INPUT
+DESCRIPTION="$(escape "${DESCRIPTION}")"
+INPUT="$(escape "${INPUT}")"
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
 SIZE=$(echo "${INPUT}" | wc -c)
@@ -541,7 +585,6 @@ TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
     # write paste data to the temporary file
     post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
-
     WGET_ARGS="--post-file=${TEMPFILE}"
 else
 	# fall back to using --post-data if the temporary file could not be created
@@ -550,7 +593,7 @@ else
 fi
 
 # set recipient
-RECIPIENT="$(get_recipient "raw")"
+RECIPIENT="$(get_recipient "_RAW")"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
@@ -579,13 +622,11 @@ verify_url
 # handle the case when there was no location returned
 if [[ -z "${URL}" ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
-		echo "Apparently nothing was received. Perhaps the connection failed." 1>&2
-		echo "${OUTPUT}" 1>&2
+		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
 		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" 1>&2
-		echo "--debug to get the output from wget that can help diagnose it correctly." 1>&2
+		die "--debug to get the output from wget that can help diagnose it correctly."
 	fi
-	exit 1
 fi
 
 # convert_to_raw() may change the value of RAW. Otherwise it set RAW_URL.
