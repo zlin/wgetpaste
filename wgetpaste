@@ -8,9 +8,15 @@ VERSION="2.1"
 
 ### helper functions
 
+print() {
+	for arg in "${@}"; do
+		echo -e "${arg}"
+	done
+}
+
 # show an error message and die
 die() {
-	echo "$*" 1>&2
+	print "${@}" 1>&2
 	exit 1
 }
 
@@ -62,33 +68,33 @@ DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
 ### usage
 
 show_usage() {
-	echo "Usage: ${0} [options] [file[s]]"
-	echo
-	echo "Options:"
-	echo "    -l, --language LANG           set language (defaults to \"${DEFAULT_LANGUAGE}\")"
-	echo "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)"
-	echo "    -n, --nick NICK               set nick (defaults to your username))"
-	echo "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")"
-	echo "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\")"
-	echo
-	echo "    -S, --list-services           list supported pastebin services"
-	echo "    -L, --list-languages          list languages supported by the specified service"
-	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
-	echo
-	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
-	echo "    -i, --info                    append the output of \`${INFO_COMMAND}\`"
-	echo "    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only"
-	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
-	echo
-	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
-	echo "    -v, --verbose                 show wget stderr output if no url is received"
-	echo "        --debug                   be *very* verbose (implies -v)"
-	echo
-	echo "    -h, --help                    show this help"
-	echo "        --version                 show version information"
-	echo
-	echo "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be"
-	echo "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
+	print "Usage: ${0} [options] [file[s]]" \
+	      "" \
+	      "Options:" \
+	      "    -l, --language LANG           set language (defaults to \"${DEFAULT_LANGUAGE}\")" \
+	      "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)" \
+	      "    -n, --nick NICK               set nick (defaults to your username))" \
+	      "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")" \
+	      "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\")" \
+	      "" \
+	      "    -S, --list-services           list supported pastebin services" \
+	      "    -L, --list-languages          list languages supported by the specified service" \
+	      "    -E, --list-expiration         list expiration setting supported by the specified service" \
+	      "" \
+	      "    -c, --command COMMAND         paste COMMAND and the output of COMMAND" \
+	      "    -i, --info                    append the output of \`${INFO_COMMAND}\`" \
+	      "    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only" \
+	      "    -x, --xcut                    read input from clipboard (requires configuration)" \
+	      "" \
+	      "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)" \
+	      "    -v, --verbose                 show wget stderr output if no url is received" \
+	      "        --debug                   be *very* verbose (implies -v)" \
+	      "" \
+	      "    -h, --help                    show this help" \
+	      "        --version                 show version information" \
+	      "" \
+	      "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be" \
+	      "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
 }
 
 ### services
@@ -334,7 +340,7 @@ while [[ -n "${1}" ]]; do
 		break
 		;;
 		--*=* )
-		ARGS[${#ARGS[*]}]="${1%=*}"
+		ARGS[${#ARGS[*]}]="${1%%=*}"
 		ARGS[${#ARGS[*]}]="${1#*=}"
 		;;
 		--* )
@@ -355,17 +361,14 @@ done
 set -- "${ARGS[@]}"
 
 no_argument() {
-	die "${0}: option requires an argument ${1}"
+	die "${0}: option ${1} requires an argument"
 }
 
 get_filename() {
-	for ((i=0; i<${#}; i++)); do
-		if [[ -f "${1}" ]]; then
-			SOURCE="files"
-			FILES[${#FILES[*]}]="${1}"
-		else
-			die "${0}: ${1}: No such file found. "
-		fi
+	for file in "${@}"; do
+		[[ -f "${file}" ]] || die "${0}: ${1} No such file found."
+		SOURCE="files"
+		FILES[${#FILES[*]}]="${file}"
 	done
 }
 
@@ -527,14 +530,14 @@ case "${SOURCE}" in
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
 		INPUT="$(get_from_clipboard)"
 	else
-		echo "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" 1>&2
-		echo "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" 1>&2
-		echo -e "\nget_from_clipboard() {\n    xclip -o\n}\n" 1>&2
-		echo "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" 1>&2
-		echo "define it like this:" 1>&2
-		echo -e "\nadd_to_clipboard() {\n    xclip \"\$*\"\n}\n" 1>&2
-		echo "You may use whatever your window manager provides to alter your clipboard instead" 1>&2
-		die "of xclip."
+		die "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" \
+		    "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" \
+		    "\nget_from_clipboard() {\n    xclip -o\n}\n" \
+		    "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" \
+		    "define it like this:" \
+		    "\nadd_to_clipboard() {\n    xclip \"\$*\"\n}\n" \
+		    "You may use whatever your window manager provides to alter your clipboard instead" \
+		    "of xclip."
 	fi
 	;;
 	files | stdin )
@@ -611,8 +614,8 @@ if [[ -z "${URL}" ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
 		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
-		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" 1>&2
-		die "--debug to get the output from wget that can help diagnose it correctly."
+		die "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" \
+		    "--debug to get the output from wget that can help diagnose it correctly."
 	fi
 fi
 
