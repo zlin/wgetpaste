@@ -135,7 +135,7 @@ verify() {
 		if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]//_/ }")" ]]; then
 			case "${2}" in
 				count )
-				let "i++" && eval "${1}=\"${i}\""
+				((i++)) && eval "${1}=\"${i}\""
 				;;
 				value )
 				eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
