@@ -36,6 +36,9 @@ show_url() {
 	echo "Your ${2}paste can be seen here: ${1}"
 }
 
+INFO_COMMAND="emerge --info"
+INFO_ARGS="--ignore-default-opts"
+
 ### defaults
 
 # The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
@@ -72,8 +75,8 @@ show_usage() {
 	echo "    -E, --list-expiration         list expiration setting supported by the specified service"
 	echo
 	echo "    -c, --command COMMAND         paste COMMAND and the output of COMMAND"
-	echo "    -i, --info                    append the output of \`emerge --info\`"
-	echo "    -I, --info-only               paste the output of \`emerge --info\` only"
+	echo "    -i, --info                    append the output of \`${INFO_COMMAND}\`"
+	echo "    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only"
 	echo "    -x, --xcut                    read input from clipboard (requires configuration)"
 	echo
 	echo "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)"
@@ -507,7 +510,7 @@ fi
 if [[ -z "${DESCRIPTION}" ]]; then
 	case "${SOURCE}" in
 		info )
-		DESCRIPTION="${PS1} emerge --info;"
+		DESCRIPTION="${PS1} ${INFO_COMMAND};"
 		;;
 		command )
 		DESCRIPTION="${PS1}"
@@ -532,7 +535,7 @@ case "${SOURCE}" in
 	done
 	;;
 	info )
-	INPUT="${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+	INPUT="${PS1} ${INFO_COMMAND}"$'\n'"$(${INFO_COMMAND} ${INFO_ARGS})"
 	;;
 	xcut )
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
@@ -566,10 +569,10 @@ case "${SOURCE}" in
 esac
 [[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
 
-# append emerge --info if needed
+# append ${INFO_COMMAND} if needed
 if [[ ${INFO} ]]; then
-	DESCRIPTION="${DESCRIPTION} ${PS1} emerge --info;"
-	INPUT="${INPUT}"$'\n'"${PS1} emerge --info"$'\n'"$(emerge --info --ignore-default-opts)"
+	DESCRIPTION="${DESCRIPTION} ${PS1} ${INFO_COMMAND};"
+	INPUT="${INPUT}"$'\n'"${PS1} ${INFO_COMMAND}"$'\n'"$(${INFO_COMMAND} ${INFO_ARGS})"
 fi
 
 # escape DESCRIPTION and INPUT
