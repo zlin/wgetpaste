@@ -242,8 +242,8 @@ warn_size() {
 			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
 		fi
 	}
-	local LIMIT=("$(eval "echo \"\${${ENGINE}_WARNS[0]}\"") ""$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")")
-	[[ "${LIMIT}" != " " ]] && warn "${LIMIT[@]}"
+	local LIMIT="$(eval "echo \"\${${ENGINE}_WARNS[0]}\"")"
+	[[ -n "${LIMIT}" ]] && warn "${LIMIT}" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
 }
 
 post_data() {
