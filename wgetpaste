@@ -45,11 +45,11 @@ INFO_ARGS="--ignore-default-opts"
 
 SERVICES=(ca rafb osl sh)
 
-# URL RAW
-ca=(http://pastebin.ca/)
-rafb=(http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
-osl=(http://pastebin.osuosl.org/ pastebin.php)
-sh=(http://sh.nu/p/)
+# URL RAW ENGINE EXPIRE_INFO
+ca=(ca http://pastebin.ca/)
+rafb=(rafb http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
+osl=(osl http://pastebin.osuosl.org/ pastebin.php)
+sh=(sh http://sh.nu/p/)
 # languages
 ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
 mIRC PL/I XML SQL Scheme ActionScript Ada Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS \
@@ -144,23 +144,24 @@ header() {
 }
 
 show() {
-	local nr="$(eval "echo \${#${SERVICE}_${1}[*]}")"
+	local nr extra
+	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
 	[[ "${2}" == expiration ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
 	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2}." 1>&2
 	for ((i=0; i<${nr}; i++)); do
-		eval "echo \"    \${${SERVICE}_${1}[i]}\""
+		eval "echo \"    \${${ENGINE}_${1}[i]}\""
 	done
 }
 
 verify() {
-	local nr="$(eval echo \${#${SERVICE}_${1}S[*]})"
+	local nr="$(eval echo \${#${ENGINE}_${1}S[*]})"
 	if [[ ${nr} -gt 0 ]]; then
 		for ((i=0; i<${nr}; i++)); do
-			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]}")" ]]; then
-				if [[ -n "$(eval "echo \"\${${SERVICE}_${1}_COUNT}\"")" ]]; then
+			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${ENGINE}_${1}S[i]}")" ]]; then
+				if [[ -n "$(eval "echo \"\${${ENGINE}_${1}_COUNT}\"")" ]]; then
 					((i++)) && eval "${1}=\"${i}\""
-				elif [[ -n "$(eval "echo \"\${${SERVICE}_${1}_VALUES}\"")" ]]; then
-					eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
+				elif [[ -n "$(eval "echo \"\${${ENGINE}_${1}_VALUES}\"")" ]]; then
+					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
 				fi
 				return 0
 			fi
@@ -205,12 +206,12 @@ verify_service() {
 # get the url to post to for any given service
 get_recipient() {
 	if [[ "${1}" == "RAW" ]]; then
-		local TARGET="$(eval "echo \"\${${SERVICE}[1]}\"")"
+		local TARGET="$(eval "echo \"\${${SERVICE}[2]}\"")"
 	else
 		local SERV="${SERVICE}: "
 	fi
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"${SERV}\${${SERVICE}[0]}${TARGET}\"" && return 0
+		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"${SERV}\${${SERVICE}[1]}${TARGET}\"" && return 0
 	done
 	die "Failed to get url for \"${SERVICE}\"."
 }
@@ -224,27 +225,27 @@ warn_size() {
 			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
 		fi
 	}
-	local LIMIT=("$(eval "echo \"\${${SERVICE}_WARNS[0]}\"") ""$(eval "echo \"\${${SERVICE}_WARNS[1]}\"")")
+	local LIMIT=("$(eval "echo \"\${${ENGINE}_WARNS[0]}\"") ""$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")")
 	[[ "${LIMIT}" != " " ]] && warn ${LIMIT[0]} ${LIMIT[1]}
 }
 
 post_data() {
 	local extra field sep nr
-	[[ $(eval "echo \"\${#${SERVICE}_POST[*]}\"") != 7 ]] && die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
-	extra="$(eval "echo -n \"\${${SERVICE}_POST[0]}\"")"
+	[[ $(eval "echo \"\${#${ENGINE}_POST[*]}\"") != 7 ]] && die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
+	extra="$(eval "echo -n \"\${${ENGINE}_POST[0]}\"")"
 	sep="&"
-	nr=${#services_POST[*]}
+	nr=${#engines_POST[*]}
 	[[ -n "${extra}" ]] && echo -n "${extra}${sep}"
 	for ((i=1; i<${nr}; i++)); do
-		field="$(eval "echo \${${SERVICE}_POST[i]}")"
+		field="$(eval "echo \${${ENGINE}_POST[i]}")"
 		[[ ${i} -eq ${nr}-1 ]] && sep=$'\n'
 		[[ -z "${field}" ]] && continue
-		eval "echo -n \"${field}=\${${services_POST[i]}}\${sep}\""
+		eval "echo -n \"${field}=\${${engines_POST[i]}}\${sep}\""
 	done
 }
 
 get_url() {
-	local GET="$(eval "echo \"\${${SERVICE}_REGEX[0]}\"")"
+	local GET="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
 	if [[ -n "${GET}" ]]; then
 		[[ "${1}" == "need_stdout" ]] && return 0
 		echo "$*" | sed -n "${GET}"
@@ -256,13 +257,13 @@ get_url() {
 
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
-	local KNOWN="$(eval "echo \"\${${SERVICE}_WARNS[2]}\"")"
-	[[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${SERVICE}_WARNS[3]}\"")"
+	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
+	[[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
 }
 
 # if possible convert URL to raw
 convert_to_raw() {
-	local CONVERT="$(eval "echo \"\${${SERVICE}_REGEX[1]}\"")"
+	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
 	if [[ -n "${CONVERT}" ]]; then
 		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
 		return 0
@@ -409,6 +410,7 @@ done
 
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
+ENGINE="$(eval "echo \${${SERVICE}[0]}")"
 [[ -n "$(eval "echo \${DEFAULT_NICK_${SERVICE}}")" ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
 [[ -z "${SOURCE}" ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
