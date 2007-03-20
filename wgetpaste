@@ -46,10 +46,10 @@ INFO_ARGS="--ignore-default-opts"
 SERVICES=(ca rafb osl sh)
 
 # URL RAW
-ca=(http://pastebin.ca/ "")
+ca=(http://pastebin.ca/)
 rafb=(http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
 osl=(http://pastebin.osuosl.org/ pastebin.php)
-sh=(http://sh.nu/p/ "")
+sh=(http://sh.nu/p/)
 # languages
 ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
 mIRC PL/I XML SQL Scheme ActionScript Ada Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS \
@@ -80,6 +80,10 @@ ca_POST=(s=Submit+Post name description type expiry "" content)
 rafb_POST=("" nick desc lang "" cvt_tabs text)
 osl_POST=(paste=Send poster "" format expiry "" code2)
 sh_POST=("" poster "" "" "" "" code)
+# regex'es
+ca_REGEX=('s|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p' 's|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|')
+rafb_REGEX=("" 's|html\?$|txt|')
+osl_REGEX=("" 's|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
 
 ### defaults
 
@@ -240,19 +244,14 @@ post_data() {
 }
 
 get_url() {
-	case "${SERVICE}" in
-		ca )
+	local GET="$(eval "echo \"\${${SERVICE}_REGEX[0]}\"")"
+	if [[ -n "${GET}" ]]; then
 		[[ "${1}" == "need_stdout" ]] && return 0
-		echo "$*" | sed -n 's|^.*content="[0-9]*;\(http://pastebin.ca/[0-9]*\)".*$|\1|p'
-		;;
-		osl | rafb | sh )
+		echo "$*" | sed -n "${GET}"
+	else
 		[[ "${1}" == "need_stdout" ]] && return 1
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
-		;;
-		* )
-		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
-		;;
-	esac
+	fi
 }
 
 # verify that the pastebin service didn't return a known error url or print a helpful error message
@@ -263,22 +262,13 @@ verify_url() {
 
 # if possible convert URL to raw
 convert_to_raw() {
-	case "${SERVICE}" in
-		ca )
-		RAW_URL="$(echo "${URL}" | sed -e 's|^\(http://pastebin.ca/\)\(.*\)$|\1raw/\2|')"
-		;;
-		osl )
-		RAW_URL="$(echo "${URL}" | sed -e 's|^\(http://pastebin.osuosl.org/\)\(.*\)$|\1pastebin.php?dl=\2|')"
-		;;
-		rafb )
-		RAW_URL="$(echo "${URL}" | sed -e 's|html\?$|txt|')"
-		;;
-		* )
-		echo "Raw download of pastes is not supported by $(get_recipient)." 1>&2
-		return 1
-		;;
-	esac
-	return 0
+	local CONVERT="$(eval "echo \"\${${SERVICE}_REGEX[1]}\"")"
+	if [[ -n "${CONVERT}" ]]; then
+		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
+		return 0
+	fi
+	echo "Raw download of pastes is not supported by $(get_recipient)." 1>&2
+	return 1
 }
 
 ### read cli options
