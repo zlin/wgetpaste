@@ -74,7 +74,12 @@ osl_EXPIRATION_VALUES=(f d m)
 # warns
 ca_WARNS=(1024000 1\ MB)
 rafb_WARNS=(512000 512\ kB http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds.")
-
+# POST data
+services_POST=(EXTRA NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT)
+ca_POST=(s=Submit+Post name description type expiry "" content)
+rafb_POST=("" nick desc lang "" cvt_tabs text)
+osl_POST=(paste=Send poster "" format expiry "" code2)
+sh_POST=("" poster "" "" "" "" code)
 
 ### defaults
 
@@ -220,23 +225,18 @@ warn_size() {
 }
 
 post_data() {
-	case "${SERVICE}" in
-		ca )
-		echo "name=${NICK}&type=${LANGUAGE}&description=${DESCRIPTION}&expiry=${EXPIRATION}&s=Submit+Post&content=${INPUT}"
-		;;
-		osl )
-		echo "poster=${NICK}&format=${LANGUAGE}&expiry=${EXPIRATION}&paste=Send&code2=${INPUT}"
-		;;
-		rafb )
-		echo "nick=${NICK}&lang=${LANGUAGE}&desc=${DESCRIPTION}&cvt_tabs=${CVT_TABS}&text=${INPUT}"
-		;;
-		sh )
-		echo "poster=${NICK}&code=${INPUT}"
-		;;
-		* )
-		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
-		;;
-	esac
+	local extra field sep nr
+	[[ $(eval "echo \"\${#${SERVICE}_POST[*]}\"") != 7 ]] && die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
+	extra="$(eval "echo -n \"\${${SERVICE}_POST[0]}\"")"
+	sep="&"
+	nr=${#services_POST[*]}
+	[[ -n "${extra}" ]] && echo -n "${extra}${sep}"
+	for ((i=1; i<${nr}; i++)); do
+		field="$(eval "echo \${${SERVICE}_POST[i]}")"
+		[[ ${i} -eq ${nr}-1 ]] && sep=$'\n'
+		[[ -z "${field}" ]] && continue
+		eval "echo -n \"${field}=\${${services_POST[i]}}\${sep}\""
+	done
 }
 
 get_url() {
