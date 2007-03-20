@@ -8,13 +8,14 @@ VERSION="2.1"
 
 ### helper functions
 
+# print multiple lines
 print() {
 	for arg in "${@}"; do
 		echo -e "${arg}"
 	done
 }
 
-# show an error message and die
+# show error message(s) and die
 die() {
 	print "${@}" 1>&2
 	exit 1
@@ -374,6 +375,9 @@ get_filename() {
 
 while [[ -n "${1}" ]]; do
 	case "${1}" in
+		-- )
+		shift && get_filename "${@}" && break
+		;;
 		-c | --command )
 		[[ -z "${2}" ]] && no_argument "${1}"
 		SOURCE="command"
@@ -450,8 +454,8 @@ while [[ -n "${1}" ]]; do
 		SOURCE="xcut"
 		shift
 		;;
-		-- )
-		shift && get_filename "${@}" && break
+		-* )
+		die "${0}: unrecognized option \`${1}'"
 		;;
 		*)
 		get_filename "${1}" && shift
