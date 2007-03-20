@@ -55,24 +55,25 @@ rafb=(http://rafb.net/paste/ paste.php)
 osl=(http://pastebin.osuosl.org/ pastebin.php)
 sh=(http://sh.nu/p/ "")
 # languages
-ca_LANGUAGES=(Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
-mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_\(NASM\) ASP Bash CSS \
-Delphi HTML_4\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
-rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain_Text)
-osl_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
-ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game_Maker HTML_4\.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
-MySQL NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
+ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
+mIRC PL/I XML SQL Scheme ActionScript Ada Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS \
+Delphi HTML\ 4\.0\ Strict JavaScript LISP Lua Microprocessor\ ASM Objective\ C VB\.NET)
+ca_LANGUAGE_COUNT=0
+rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain\ Text)
+osl_LANGUAGES=(Plain\ Text ActionScript Ada Apache\ Log\ File AppleScript Assembly\ \(NASM\) \
+ASP Bash C C\ for\ Macs CAD\ DCL CAD\ Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
+FreeBasic Game\ Maker HTML\ 4\.0\ Strict INI\ file Java Javascript Lisp Lua MatLab Microprocessor\ ASM \
+MySQL NullSoft\ Installer Objective\ C OCaml Openoffice\.org\ BASIC Oracle\ 8 Pascal Perl PHP Python \
 QBasic Robots\.txt Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
-osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_mac caddcl \
+osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c\ mac caddcl \
 cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
 javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
 qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
 # expirations
-ca_EXPIRATIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours 4_hours \
-8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months 4_months \
-5_months 6_months 1_year)
-osl_EXPIRATIONS=(Never 1_day 1_month)
+ca_EXPIRATIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes 1\ hour 2\ hours \
+4\ hours 8\ hours 12\ hours 1\ day 2\ days 3\ days 1\ week 2\ weeks 3\ weeks 1\ month 2\ months \
+3\ months 4\ months 5\ months 6\ months 1\ year)
+osl_EXPIRATIONS=(Never 1\ day 1\ month)
 osl_EXPIRATION_VALUES=(f d m)
 
 
@@ -141,20 +142,22 @@ show() {
 }
 
 verify() {
-	for ((i=0; i<$(eval echo \${#${SERVICE}_${1}S[*]}); i++)); do
-		if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]//_/ }")" ]]; then
-			case "${2}" in
-				count )
-				((i++)) && eval "${1}=\"${i}\""
-				;;
-				value )
-				eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
-				;;
-			esac
-			return 0
-		fi
-	done
-	return 1
+	local nr="$(eval echo \${#${SERVICE}_${1}S[*]})"
+	if [[ ${nr} -gt 0 ]]; then
+		for ((i=0; i<${nr}; i++)); do
+			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${SERVICE}_${1}S[i]}")" ]]; then
+				if [[ -n "$(eval "echo \"\${${SERVICE}_${1}_COUNT}\"")" ]]; then
+					((i++)) && eval "${1}=\"${i}\""
+				elif [[ -n "$(eval "echo \"\${${SERVICE}_${1}_VALUES}\"")" ]]; then
+					eval "${1}=\${${SERVICE}_${1}_VALUES[i]}"
+				fi
+				return 0
+			fi
+		done
+	else
+		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
+	fi
+	fail "$(eval echo \${${1}})" "${2}" "$(eval echo show_${2// /_}s)"
 }
 
 show_services() {
@@ -200,40 +203,6 @@ verify_service() {
 		[[ "$*" == "${service}" ]] && return 0
 	done
 	fail "$*" "service" "show_services"
-}
-
-# this is in place because rafb.net (probably others too) rejects any paste with an invalid language
-verify_language() {
-	case "${SERVICE}" in
-		ca )
-		verify LANGUAGE count && return 0
-		;;
-		rafb )
-		verify LANGUAGE && return 0
-		;;
-		osl )
-		verify LANGUAGE value && return 0
-		;;
-		* )
-		[[ ${LANGUAGE_SET} ]] || return 0
-		;;
-	esac
-	fail "${LANGUAGE}" "language" "show_languages"
-}
-
-verify_expiration_options() {
-	case "${SERVICE}" in
-		ca )
-		verify EXPIRATION && return 0
-		;;
-		osl )
-		verify EXPIRATION value && return 0
-		;;
-		* )
-		[[ ${EXPIRATION_SET} ]] || return 0 
-		;;
-	esac
-	fail "${EXPIRATION}" "expiration option" "show_expiration_options"
 }
 
 ### Posting helper functions
@@ -399,7 +368,7 @@ while [[ -n "${1}" ]]; do
 		;;
 		-e | --expiration )
 		[[ -z "${2}" ]] && no_argument "${1}"
-		EXPIRATION_SET=true
+		EXPIRATION_SET=0
 		EXPIRATION="${2}"
 		shift 2
 		;;
@@ -420,7 +389,7 @@ while [[ -n "${1}" ]]; do
 		;;
 		-l | --language )
 		[[ -z "${2}" ]] && no_argument "${1}"
-		LANGUAGE_SET=true
+		LANGUAGE_SET=0
 		LANGUAGE="${2}"
 		shift 2
 		;;
@@ -485,14 +454,14 @@ CVT_TABS="No"
 [[ -n "$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")" ]] && LANGUAGE="${LANGUAGE:-$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")}"
 LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
 # uses ${SERVICE} and ${LANGUAGE}. may change the value of the latter.
-verify_language
+verify LANGUAGE language
 LANGUAGE="$(escape "${LANGUAGE}")"
 
 # expiration needs to be verified before it is escaped but after service is selected
 [[ -n "$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")" ]] && EXPIRATION="${EXPIRATION:-$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")}"
 EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
 # uses ${SERVICE} and ${EXPIRATION}. may change the value of the latter.
-verify_expiration_options
+verify EXPIRATION "expiration option"
 EXPIRATION="$(escape "${EXPIRATION}")"
 
 # set prompt
