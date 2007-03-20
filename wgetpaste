@@ -174,13 +174,23 @@ verify() {
 
 show_services() {
 	header "Service"
-	local max=0
+	local max arg s IND INDV engine
+	max=0
 	for arg in "${SERVICES[@]}"; do
 		[[ ${#arg} -gt ${max} ]] && max=${#arg}
 	done
 	((IND=6+${max}))
+	if ${VERBOSE}; then
+		max=0
+		for s in "${SERVICES[@]}"; do
+			arg=$(eval "echo \${${s}[1]}")
+			[[ ${#arg} -gt ${max} ]] && max=${#arg}
+		done
+		((INDV=3+${max}+${IND}))
+	fi
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[0]}\""
+		[[ ${VERBOSE} ]] && eval "engine=$'\e'\"[${INDV}G- \${${SERVICES[i]}[0]}\""
+		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[1]}${engine}\""
 	done
 }
 
@@ -384,7 +394,8 @@ while [[ -n "${1}" ]]; do
 		shift 2
 		;;
 		-S | --list-services )
-		show_services && exit 0
+		SHOW_SERVICES=true
+		shift
 		;;
 		-v | --verbose )
 		VERBOSE=true
@@ -407,6 +418,9 @@ while [[ -n "${1}" ]]; do
 done
 
 ### everything below this should be independent of which service is being used...
+
+# show services if requested (need to respect --verbose if specified)
+[[ ${SHOW_SERVICES} ]] && show_services && exit 0
 
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
