@@ -23,7 +23,7 @@ die() {
 
 # show that an option ${1} is not supported, run function that shows valid options ${3} and die
 fail() {
-	[[ "${2}" == "service" ]] || FOR=" for $(get_recipient)"
+	[[ "${2}" == "service" ]] || local FOR=" for $(get_recipient)"
 	echo "\"$1\" is not a supported $2${FOR}."$'\n' 1>&2
 	${3} 1>&2
 	exit 1
@@ -34,7 +34,7 @@ escape() {
 	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
 }	
 
-show_url() {
+showurl() {
 	[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${1}"
 	echo "Your ${2}paste can be seen here: ${1}"
 }
@@ -43,13 +43,18 @@ show_url() {
 INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
 
+### service definitions
+
 SERVICES=(ca rafb osl sh)
 
-# URL RAW ENGINE EXPIRE_INFO
+# ENGINE URL RAW EXPIRE_INFO
 ca=(ca http://pastebin.ca/)
 rafb=(rafb http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
 osl=(osl http://pastebin.osuosl.org/ pastebin.php)
 sh=(sh http://sh.nu/p/)
+
+### engine definitions
+
 # languages
 ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
 mIRC PL/I XML SQL Scheme ActionScript Ada Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS \
@@ -106,7 +111,7 @@ DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
 
 ### usage
 
-show_usage() {
+usage() {
 	print "Usage: ${0} [options] [file[s]]" \
 	      "" \
 	      "Options:" \
@@ -136,10 +141,10 @@ show_usage() {
 	      "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
 }
 
-### services
+### show functions
 
 header() {
-	[[ "${1}" == "Service" ]] || BY="by $(get_recipient) "
+	[[ "${1}" == "Service" ]] || local BY="by $(get_recipient) "
 	echo "${1}s supported ${BY}(case sensitive):"
 }
 
@@ -153,28 +158,9 @@ show() {
 	done
 }
 
-verify() {
-	local nr="$(eval echo \${#${ENGINE}_${1}S[*]})"
-	if [[ ${nr} -gt 0 ]]; then
-		for ((i=0; i<${nr}; i++)); do
-			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${ENGINE}_${1}S[i]}")" ]]; then
-				if [[ -n "$(eval "echo \"\${${ENGINE}_${1}_COUNT}\"")" ]]; then
-					((i++)) && eval "${1}=\"${i}\""
-				elif [[ -n "$(eval "echo \"\${${ENGINE}_${1}_VALUES}\"")" ]]; then
-					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
-				fi
-				return 0
-			fi
-		done
-	else
-		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
-	fi
-	fail "$(eval echo \${${1}})" "${2}" "$(eval echo show_${2// /_}s)"
-}
-
 show_services() {
 	header "Service"
-	local max arg s IND INDV engine
+	local max arg IND INDV engine
 	max=0
 	for arg in "${SERVICES[@]}"; do
 		[[ ${#arg} -gt ${max} ]] && max=${#arg}
@@ -204,11 +190,32 @@ show_expiration_options() {
 	show EXPIRATIONS expiration
 }
 
+### verify functions
+
 verify_service() {
 	for service in ${SERVICES[*]}; do
 		[[ "$*" == "${service}" ]] && return 0
 	done
 	fail "$*" "service" "show_services"
+}
+
+verify() {
+	local nr="$(eval echo \${#${ENGINE}_${1}S[*]})"
+	if [[ ${nr} -gt 0 ]]; then
+		for ((i=0; i<${nr}; i++)); do
+			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${ENGINE}_${1}S[i]}")" ]]; then
+				if [[ -n "$(eval "echo \"\${${ENGINE}_${1}_COUNT}\"")" ]]; then
+					((i++)) && eval "${1}=\"${i}\""
+				elif [[ -n "$(eval "echo \"\${${ENGINE}_${1}_VALUES}\"")" ]]; then
+					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
+				fi
+				return 0
+			fi
+		done
+	else
+		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
+	fi
+	fail "$(eval echo \${${1}})" "${2}" "$(eval echo show_${2// /_}s)"
 }
 
 ### Posting helper functions
@@ -227,7 +234,7 @@ get_recipient() {
 }
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
-# service in that regard. note that this is only a warning printed. it doesn't abort or anything.
+# service in that regard. note that this is only a warning printed. it doesn't abort.
 warn_size() {
 	warn() {
 		if [[ ${SIZE} -gt ${1} ]]; then
@@ -236,7 +243,7 @@ warn_size() {
 		fi
 	}
 	local LIMIT=("$(eval "echo \"\${${ENGINE}_WARNS[0]}\"") ""$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")")
-	[[ "${LIMIT}" != " " ]] && warn ${LIMIT[0]} ${LIMIT[1]}
+	[[ "${LIMIT}" != " " ]] && warn "${LIMIT[@]}"
 }
 
 post_data() {
@@ -358,7 +365,7 @@ while [[ -n "${1}" ]]; do
 		shift
 		;;
 		-h | --help )
-		show_usage && exit 0
+		usage && exit 0
 		;;
 		-i | --info )
 		INFO=true
@@ -583,9 +590,9 @@ fi
 
 # convert_to_raw() may change the value of RAW. Otherwise it set RAW_URL.
 if [[ ${RAW} ]] && convert_to_raw; then
-	show_url "${RAW_URL}" "raw "
+	showurl "${RAW_URL}" "raw "
 else
-	show_url "${URL}"
+	showurl "${URL}"
 fi
 
 exit 0
