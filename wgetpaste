@@ -143,23 +143,19 @@ usage() {
 
 ### show functions
 
-header() {
-	[[ "${1}" == "Service" ]] || local BY="by $(get_recipient) "
-	echo "${1}s supported ${BY}(case sensitive):"
-}
-
 show() {
+	echo "${2}s supported by $(get_recipient) (case sensitive):"
 	local nr extra
 	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
-	[[ "${2}" == expiration ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
-	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2}." 1>&2
+	[[ "${3}" == expiration ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
+	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${3}." 1>&2
 	for ((i=0; i<${nr}; i++)); do
 		eval "echo \"    \${${ENGINE}_${1}[i]}\""
-	done
+	done | ${4:-cat}
 }
 
 show_services() {
-	header "Service"
+	echo "Services supported: (case sensitive):"
 	local max arg IND INDV engine
 	max=0
 	for arg in "${SERVICES[@]}"; do
@@ -178,16 +174,6 @@ show_services() {
 		[[ ${VERBOSE} ]] && eval "engine=$'\e'\"[${INDV}G- \${${SERVICES[i]}[0]}\""
 		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[1]}${engine}\""
 	done
-}
-
-show_languages() {
-	header "Language"
-	show LANGUAGES language | sort
-}
-
-show_expiration_options() {
-	header "Expiration option"
-	show EXPIRATIONS expiration
 }
 
 ### verify functions
@@ -438,10 +424,10 @@ NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
 CVT_TABS="No"
 
 # show languages if requested (needs to be done after the right service is selected)
-[[ ${LIST_LANGUAGES} ]] && show_languages && exit 0
+[[ ${LIST_LANGUAGES} ]] && show LANGUAGES Language language sort && exit 0
 
 # show expiration options if requested (needs to be done after the right service is selected)
-[[ ${LIST_EXPIRATION} ]] && show_expiration_options && exit 0
+[[ ${LIST_EXPIRATION} ]] && show EXPIRATIONS "Expiration option" expiration && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
 [[ -n "$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")" ]] && LANGUAGE="${LANGUAGE:-$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")}"
