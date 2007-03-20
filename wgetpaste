@@ -179,8 +179,8 @@ show_services() {
 ### verify functions
 
 verify_service() {
-	for service in ${SERVICES[*]}; do
-		[[ "$*" == "${service}" ]] && return 0
+	for s in "${SERVICES[@]}"; do
+		[[ "$*" == "${s}" ]] && return 0
 	done
 	fail "$*" "service" "show_services"
 }
@@ -213,8 +213,8 @@ get_recipient() {
 	else
 		local SERV="${SERVICE}: "
 	fi
-	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"${SERV}\${${SERVICE}[1]}${TARGET}\"" && return 0
+	for s in "${SERVICES[@]}"; do
+		[[ "${SERVICE}" == "${s}" ]] && eval "echo \"${SERV}\${${s}[1]}${TARGET}\"" && return 0
 	done
 	die "Failed to get url for \"${SERVICE}\"."
 }
@@ -458,8 +458,8 @@ if [[ -z "${DESCRIPTION}" ]]; then
 		;;
 		command )
 		DESCRIPTION="${PS1}"
-		for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
-			DESCRIPTION="${DESCRIPTION} ${COMMANDS[i]};"
+		for c in "${COMMANDS[@]}"; do
+			DESCRIPTION="${DESCRIPTION} ${c};"
 		done
 		;;
 		files )
@@ -474,8 +474,8 @@ fi
 # read input
 case "${SOURCE}" in
 	command )
-	for ((i=0 ; i<${#COMMANDS[*]}; i++)); do
-		INPUT="${INPUT}${PS1} ${COMMANDS[i]}"$'\n'"$(bash -c "${COMMANDS[i]}" 2>&1)"$'\n\n'
+	for c in "${COMMANDS[@]}"; do
+		INPUT="${INPUT}${PS1} ${c}"$'\n'"$(bash -c "${c}" 2>&1)"$'\n\n'
 	done
 	;;
 	info )
@@ -498,11 +498,10 @@ case "${SOURCE}" in
 	files | stdin )
 	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
 	if [[ ${#FILES[*]} -gt 1 ]]; then
-		for ((i=0; i<${#FILES[*]}; i++)); do
-			file="${FILES[i]}"
-			[[ -r "${file}" ]] || \
-				die "The input source: \"${file}\" is not readable. Please specify a readable input source."
-			INPUT="${INPUT}${PS1} cat ${file}"$'\n'"$( < "${file}" )"$'\n\n'
+		for f in "${FILES[@]}"; do
+			[[ -r "${f}" ]] || \
+				die "The input source: \"${f}\" is not readable. Please specify a readable input source."
+			INPUT="${INPUT}${PS1} cat ${f}"$'\n'"$( < "${f}" )"$'\n\n'
 		done
 	else
 		INPUT="$( < "${FILES}" )"
