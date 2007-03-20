@@ -81,9 +81,9 @@ rafb_POST=("" nick desc lang "" cvt_tabs text)
 osl_POST=(paste=Send poster "" format expiry "" code2)
 sh_POST=("" poster "" "" "" "" code)
 # regex'es
-ca_REGEX=('s|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p' 's|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|')
-rafb_REGEX=("" 's|html\?$|txt|')
-osl_REGEX=("" 's|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
+ca_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|' 's|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p')
+rafb_REGEX=('s|html\?$|txt|')
+osl_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
 
 ### defaults
 
@@ -255,7 +255,7 @@ post_data() {
 }
 
 get_url() {
-	local GET="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
+	local GET="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
 	if [[ -n "${GET}" ]]; then
 		[[ "${1}" == "need_stdout" ]] && return 0
 		echo "$*" | sed -n "${GET}"
@@ -273,7 +273,7 @@ verify_url() {
 
 # if possible convert URL to raw
 convert_to_raw() {
-	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
+	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
 	if [[ -n "${CONVERT}" ]]; then
 		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
 		return 0
