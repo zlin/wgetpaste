@@ -21,10 +21,6 @@ die() {
 	exit 1
 }
 
-no_support() {
-	echo -e "\n${2}\"${SERVICE}\" has no support for setting ${1}." 1>&2
-}
-
 # show that an option ${1} is not supported, run function that shows valid options ${3} and die
 fail() {
 	[[ "${2}" == "service" ]] || FOR=" for $(get_recipient)"
@@ -51,7 +47,7 @@ SERVICES=(ca rafb osl sh)
 
 # URL RAW
 ca=(http://pastebin.ca/ "")
-rafb=(http://rafb.net/paste/ paste.php)
+rafb=(http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
 osl=(http://pastebin.osuosl.org/ pastebin.php)
 sh=(http://sh.nu/p/ "")
 # languages
@@ -136,8 +132,11 @@ header() {
 }
 
 show() {
-	for var in $(eval "echo \${${SERVICE}_${1}[*]}"); do
-		echo "    ${var//_/ }"
+	local nr="$(eval "echo \${#${SERVICE}_${1}[*]}")"
+	[[ "${2}" == expiration ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
+	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2}." 1>&2
+	for ((i=0; i<${nr}; i++)); do
+		eval "echo \"    \${${SERVICE}_${1}[i]}\""
 	done
 }
 
@@ -174,28 +173,12 @@ show_services() {
 
 show_languages() {
 	header "Language"
-	case "${SERVICE}" in
-		ca | osl | rafb )
-		show LANGUAGES | sort
-		;;
-		* )
-		no_support language
-	esac
+	show LANGUAGES language | sort
 }
 
 show_expiration_options() {
 	header "Expiration option"
-	case "${SERVICE}" in
-		ca | osl )
-		show EXPIRATIONS
-		;;
-		rafb )
-		no_support expiration "Pastes on $(get_recipient) expire after 24 hours.\n"
-		;;
-		* )
-		no_support expiration
-		;;
-	esac
+	show EXPIRATIONS expiration
 }
 
 verify_service() {
