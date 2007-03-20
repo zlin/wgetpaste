@@ -261,7 +261,7 @@ get_url() {
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
 	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
-	[[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
+	[[ -n "${KNOWN}" ]] && [[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
 }
 
 # if possible convert URL to raw
