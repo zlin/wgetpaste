@@ -47,6 +47,33 @@ show_url() {
 INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
 
+SERVICES=(ca rafb osl sh)
+SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://pastebin.osuosl.org/ http://sh.nu/p/)
+SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://pastebin.osuosl.org/pastebin.php http://sh.nu/p/)
+# 4 (base indentation) + max service length + 2 (space + dash)
+INDENTATION=10
+# languages
+rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain_Text)
+ca_LANGUAGES=(Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
+mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_\(NASM\) ASP Bash CSS \
+Delphi HTML_4\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
+osl_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
+ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
+FreeBasic Game_Maker HTML_4\.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
+MySQL NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
+QBasic Robots\.txt Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
+osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_mac caddcl \
+cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
+javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
+qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
+# expirations
+ca_EXPIRATIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours 4_hours \
+8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months 4_months \
+5_months 6_months 1_year)
+osl_EXPIRATIONS=(Never 1_day 1_month)
+osl_EXPIRATION_VALUES=(f d m)
+
+
 ### defaults
 
 # The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
@@ -100,29 +127,9 @@ show_usage() {
 
 ### services
 
-SERVICES=(ca rafb osl sh)
-SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://pastebin.osuosl.org/ http://sh.nu/p/)
-SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://pastebin.osuosl.org/pastebin.php http://sh.nu/p/)
-# 4 (base indentation) + max service length + 2 (space + dash)
-INDENTATION=10
-
 header() {
 	[[ "${1}" == "Service" ]] || BY="by $(get_recipient) "
 	echo "${1}s supported ${BY}(case sensitive):"
-}
-
-show_services() {
-	header "Service"
-	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		echo "    ${SERVICES[i]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
-	done
-}
-
-verify_service() {
-	for service in ${SERVICES[*]}; do
-		[[ "$*" == "${service}" ]] && return 0
-	done
-	fail "$*" "service" "show_services"
 }
 
 show() {
@@ -148,24 +155,12 @@ verify() {
 	return 1
 }
 
-### languages
-
-# rafb
-rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain_Text)
-# ca - ordering is important here as count is used as value
-ca_LANGUAGES=(Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
-mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_\(NASM\) ASP Bash CSS \
-Delphi HTML_4\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
-# osl - ordering for languages and values must be the same
-osl_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
-ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game_Maker HTML_4\.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
-MySQL NullSoft_Installer Objective_C OCaml Openoffice\.org_BASIC Oracle_8 Pascal Perl PHP Python \
-QBasic Robots\.txt Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
-osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c_mac caddcl \
-cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
-javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
-qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
+show_services() {
+	header "Service"
+	for ((i=0; i<${#SERVICES[*]}; i++)); do
+		echo "    ${SERVICES[i]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
+	done
+}
 
 show_languages() {
 	header "Language"
@@ -176,6 +171,28 @@ show_languages() {
 		* )
 		no_support language
 	esac
+}
+
+show_expiration_options() {
+	header "Expiration option"
+	case "${SERVICE}" in
+		ca | osl )
+		show EXPIRATIONS
+		;;
+		rafb )
+		no_support expiration "Pastes on $(get_recipient) expire after 24 hours.\n"
+		;;
+		* )
+		no_support expiration
+		;;
+	esac
+}
+
+verify_service() {
+	for service in ${SERVICES[*]}; do
+		[[ "$*" == "${service}" ]] && return 0
+	done
+	fail "$*" "service" "show_services"
 }
 
 # this is in place because rafb.net (probably others too) rejects any paste with an invalid language
@@ -195,31 +212,6 @@ verify_language() {
 		;;
 	esac
 	fail "${LANGUAGE}" "language" "show_languages"
-}
-
-### expiration
-
-# ca
-ca_EXPIRATIONS=(Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours 4_hours \
-8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months 3_months 4_months \
-5_months 6_months 1_year)
-# osl - ordering for options and values must be the same
-osl_EXPIRATIONS=(Never 1_day 1_month)
-osl_EXPIRATION_VALUES=(f d m)
-
-show_expiration_options() {
-	header "Expiration option"
-	case "${SERVICE}" in
-		ca | osl )
-		show EXPIRATIONS
-		;;
-		rafb )
-		no_support expiration "Pastes on $(get_recipient) expire after 24 hours.\n"
-		;;
-		* )
-		no_support expiration
-		;;
-	esac
 }
 
 verify_expiration_options() {
