@@ -48,15 +48,17 @@ INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
 
 SERVICES=(ca rafb osl sh)
-SERVICE_URLS=(http://pastebin.ca http://rafb.net/paste/ http://pastebin.osuosl.org/ http://sh.nu/p/)
-SERVICE_URLS_RAW=(http://pastebin.ca http://rafb.net/paste/paste.php http://pastebin.osuosl.org/pastebin.php http://sh.nu/p/)
-# 4 (base indentation) + max service length + 2 (space + dash)
-INDENTATION=10
+
+# URL RAW
+ca=(http://pastebin.ca/ "")
+rafb=(http://rafb.net/paste/ paste.php)
+osl=(http://pastebin.osuosl.org/ pastebin.php)
+sh=(http://sh.nu/p/ "")
 # languages
-rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain_Text)
 ca_LANGUAGES=(Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
 mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_\(NASM\) ASP Bash CSS \
 Delphi HTML_4\.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB\.NET)
+rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain_Text)
 osl_LANGUAGES=(Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_\(NASM\) \
 ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
 FreeBasic Game_Maker HTML_4\.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
@@ -157,8 +159,13 @@ verify() {
 
 show_services() {
 	header "Service"
+	local max=0
+	for arg in "${SERVICES[@]}"; do
+		[[ ${#arg} -gt ${max} ]] && max=${#arg}
+	done
+	((IND=6+${max}))
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		echo "    ${SERVICES[i]} "$'\e'"[${INDENTATION}G- ${SERVICE_URLS[i]}"
+		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[0]}\""
 	done
 }
 
@@ -233,9 +240,13 @@ verify_expiration_options() {
 
 # get the url to post to for any given service
 get_recipient() {
-	[[ "${1}" == "_RAW" ]] || serv="${SERVICE}: "
+	if [[ "${1}" == "RAW" ]]; then
+		local TARGET="$(eval "echo \"\${${SERVICE}[1]}\"")"
+	else
+		local SERV="${SERVICE}: "
+	fi
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
-		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo ${serv}\"\${SERVICE_URLS${1}[i]}\"" && return 0
+		[[ "${SERVICE}" == "${SERVICES[i]}" ]] && eval "echo \"${SERV}\${${SERVICE}[0]}${TARGET}\"" && return 0
 	done
 	die "Failed to get url for \"${SERVICE}\"."
 }
@@ -579,7 +590,7 @@ else
 fi
 
 # set recipient
-RECIPIENT="$(get_recipient "_RAW")"
+RECIPIENT="$(get_recipient RAW)"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
