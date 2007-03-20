@@ -71,6 +71,9 @@ ca_EXPIRATIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes
 3\ months 4\ months 5\ months 6\ months 1\ year)
 osl_EXPIRATIONS=(Never 1\ day 1\ month)
 osl_EXPIRATION_VALUES=(f d m)
+# warns
+ca_WARNS=(1024000 1\ MB)
+rafb_WARNS=(512000 512\ kB http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds.")
 
 
 ### defaults
@@ -212,14 +215,8 @@ warn_size() {
 			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
 		fi
 	}
-	case "${SERVICE}" in
-		rafb )
-		warn 512000 "512 kb"
-		;;
-		ca )
-		warn 1024000 "1 MB"
-		;;
-	esac
+	local LIMIT=("$(eval "echo \"\${${SERVICE}_WARNS[0]}\"") ""$(eval "echo \"\${${SERVICE}_WARNS[1]}\"")")
+	[[ "${LIMIT}" != " " ]] && warn ${LIMIT[0]} ${LIMIT[1]}
 }
 
 post_data() {
@@ -260,8 +257,8 @@ get_url() {
 
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
-	[[ "${SERVICE}" == "rafb" ]] && [[ "${URL}" == "http://rafb.net/p/toofast.html" ]] && \
-		die "You must wait at least 10 seconds between each paste! Try again in 10 seconds."
+	local KNOWN="$(eval "echo \"\${${SERVICE}_WARNS[2]}\"")"
+	[[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${SERVICE}_WARNS[3]}\"")"
 }
 
 # if possible convert URL to raw
