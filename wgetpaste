@@ -80,7 +80,7 @@ osl_EXPIRATION_VALUES=(f d m)
 ca_WARNS=(1024000 1\ MB)
 rafb_WARNS=(512000 512\ kB http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds.")
 # POST data
-services_POST=(EXTRA NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT)
+engines_POST=(EXTRA NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT)
 ca_POST=(s=Submit+Post name description type expiry "" content)
 rafb_POST=("" nick desc lang "" cvt_tabs text)
 osl_POST=(paste=Send poster "" format expiry "" code2)
