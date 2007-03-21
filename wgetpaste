@@ -284,6 +284,10 @@ while [[ -n "${1}" ]]; do
 		done
 		break
 		;;
+		--debug )
+		set -x
+		DEBUG=true
+		;;
 		--*=* )
 		ARGS[${#ARGS[*]}]="${1%%=*}"
 		ARGS[${#ARGS[*]}]="${1#*=}"
@@ -327,11 +331,6 @@ while [[ -n "${1}" ]]; do
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="${2}"
 		shift 2
-		;;
-		--debug )
-		DEBUG=true
-		set -x
-		shift
 		;;
 		-d | --description )
 		[[ -z "${2}" ]] && no_argument "${1}"
