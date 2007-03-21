@@ -165,7 +165,7 @@ show_services() {
 	for ((i=0; i<${#SERVICES[*]}; i++)); do
 		[[ ${VERBOSE} ]] && eval "engine=$'\e'\"[${INDV}G- \${${SERVICES[i]}[0]}\""
 		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[1]}${engine}\""
-	done
+	done | sort
 }
 
 ### verify functions
@@ -185,7 +185,8 @@ verify() {
 		for ((i=0; i<${nr}; i++)); do
 			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${ENGINE}_${1}S[i]}")" ]]; then
 				if [[ -n "$(eval "echo \"\${${ENGINE}_${1}_COUNT}\"")" ]]; then
-					((i++)) && eval "${1}=\"${i}\""
+					((i++))
+					eval "${1}=\"${i}\""
 				elif [[ -n "$(eval "echo \"\${${ENGINE}_${1}_VALUES}\"")" ]]; then
 					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
 				fi
