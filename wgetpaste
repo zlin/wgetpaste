@@ -92,8 +92,9 @@ osl_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
 #
 # Likewise if get_from_clipboard() is defined as a function in one of those files it will be
 # called to retrieve input from your clipboard when --xcut is used.
-[[ -f /etc/wgetpaste ]] && . /etc/wgetpaste
-[[ -f ~/.wgetpaste ]] && . ~/.wgetpaste
+for f in {/etc/,~/.}wgetpaste{,/*.bash}; do
+	[[ -f "${f}" ]] && . "${f}"
+done
 DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
 DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
