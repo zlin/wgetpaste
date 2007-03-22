@@ -8,16 +8,9 @@ VERSION="2.1"
 
 ### helper functions
 
-# print multiple lines
-print() {
-	for arg in "${@}"; do
-		echo -e "${arg}"
-	done
-}
-
 # show error message(s) and die
 die() {
-	print "${@}" 1>&2
+	echo "${@}" >&2
 	exit 1
 }
 
@@ -105,33 +98,35 @@ DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
 ### usage
 
 usage() {
-	print "Usage: ${0} [options] [file[s]]" \
-	      "" \
-	      "Options:" \
-	      "    -l, --language LANG           set language (defaults to \"${DEFAULT_LANGUAGE}\")" \
-	      "    -d, --description DESCRIPTION set description (defaults to \"stdin\" or filename)" \
-	      "    -n, --nick NICK               set nick (defaults to your username))" \
-	      "    -s, --service SERVICE         set service to use (defaults to \"${DEFAULT_SERVICE}\")" \
-	      "    -e, --expiration EXPIRATION   set when it should expire (defaults to \"${DEFAULT_EXPIRATION}\")" \
-	      "" \
-	      "    -S, --list-services           list supported pastebin services" \
-	      "    -L, --list-languages          list languages supported by the specified service" \
-	      "    -E, --list-expiration         list expiration setting supported by the specified service" \
-	      "" \
-	      "    -c, --command COMMAND         paste COMMAND and the output of COMMAND" \
-	      "    -i, --info                    append the output of \`${INFO_COMMAND}\`" \
-	      "    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only" \
-	      "    -x, --xcut                    read input from clipboard (requires configuration)" \
-	      "" \
-	      "    -r, --raw                     show url for the raw paste (no syntax highlighting or html)" \
-	      "    -v, --verbose                 show wget stderr output if no url is received" \
-	      "        --debug                   be *very* verbose (implies -v)" \
-	      "" \
-	      "    -h, --help                    show this help" \
-	      "        --version                 show version information" \
-	      "" \
-	      "Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be" \
-	      "overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste."
+	cat <<EOF
+Usage: ${0} [options] [file[s]]
+
+Options:
+    -l, --language LANG           set language (defaults to "${DEFAULT_LANGUAGE}")
+    -d, --description DESCRIPTION set description (defaults to "stdin" or filename)
+    -n, --nick NICK               set nick (defaults to your username))
+    -s, --service SERVICE         set service to use (defaults to "${DEFAULT_SERVICE}")
+    -e, --expiration EXPIRATION   set when it should expire (defaults to "${DEFAULT_EXPIRATION}")
+
+    -S, --list-services           list supported pastebin services
+    -L, --list-languages          list languages supported by the specified service
+    -E, --list-expiration         list expiration setting supported by the specified service
+
+    -c, --command COMMAND         paste COMMAND and the output of COMMAND
+    -i, --info                    append the output of \`${INFO_COMMAND}\`
+    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only
+    -x, --xcut                    read input from clipboard (requires configuration)
+
+    -r, --raw                     show url for the raw paste (no syntax highlighting or html)
+    -v, --verbose                 show wget stderr output if no url is received
+        --debug                   be *very* verbose (implies -v)
+
+    -h, --help                    show this help
+        --version                 show version information
+
+Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be
+overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste.
+EOF
 }
 
 ### show functions
@@ -141,7 +136,7 @@ show() {
 	local nr extra
 	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
 	[[ "${2}" == expiration* ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
-	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." 1>&2
+	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." >&2
 	for ((i=0; i<${nr}; i++)); do
 		eval "echo \"    \${${ENGINE}_${1}[i]}\""
 	done | ${3:-cat}
@@ -175,8 +170,8 @@ verify_service() {
 	for s in "${SERVICES[@]}"; do
 		[[ "$*" == "${s}" ]] && return 0
 	done
-	echo -e "\"$*\" is not a supported service.\n" 1>&2
-	show_services 1>&2
+	echo -e "\"$*\" is not a supported service.\n" >&2
+	show_services >&2
 	exit 1
 }
 
@@ -197,8 +192,8 @@ verify() {
 	else
 		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
 	fi
-	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(get_recipient).\n" 1>&2
-	show ${1}S "${2}" 1>&2
+	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(get_recipient).\n" >&2
+	show ${1}S "${2}" >&2
 	exit 1
 }
 
@@ -269,7 +264,7 @@ convert_to_raw() {
 		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
 		return 0
 	fi
-	echo "Raw download of pastes is not supported by $(get_recipient)." 1>&2
+	echo "Raw download of pastes is not supported by $(get_recipient)." >&2
 	return 1
 }
 
@@ -482,14 +477,25 @@ case "${SOURCE}" in
 	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
 		INPUT="$(get_from_clipboard)"
 	else
-		die "You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use" \
-		    "--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:" \
-		    "\nget_from_clipboard() {\n    xclip -o\n}\n" \
-		    "Likewise if you want the resulting url stored in your clipboard using e.g. xclip" \
-		    "define it like this:" \
-		    "\nadd_to_clipboard() {\n    xclip \"\$*\"\n}\n" \
-		    "You may use whatever your window manager provides to alter your clipboard instead" \
-		    "of xclip."
+		cat <<EOF
+You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use
+--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:
+
+get_from_clipboard() {
+	xclip -o
+}
+
+Likewise if you want the resulting url stored in your clipboard using e.g. xclip
+define it like this:
+
+add_to_clipboard() {
+	xclip "\$*"
+}
+
+You may use whatever your window manager provides to alter your clipboard instead
+of xclip.
+EOF
+		exit 1
 	fi
 	;;
 	files | stdin )
@@ -519,7 +525,7 @@ INPUT="$(escape "${INPUT}")"
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
 SIZE=$(echo "${INPUT}" | wc -c)
-warn_size 1>&2
+warn_size >&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
@@ -549,7 +555,7 @@ if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
 	if [[ ${DEBUG} ]]; then
 		echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
 	else
-		rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." 1>&2
+		rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." >&2
 	fi
 fi
 
@@ -565,8 +571,8 @@ if [[ -z "${URL}" ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
 		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
-		die "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" \
-		    "--debug to get the output from wget that can help diagnose it correctly."
+		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" >&2
+		die "--debug to get the output from wget that can help diagnose it correctly."
 	fi
 fi
 
