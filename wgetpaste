@@ -179,18 +179,18 @@ verify() {
 	local nr="$(eval echo \${#${ENGINE}_${1}S[*]})"
 	if [[ ${nr} -gt 0 ]]; then
 		for ((i=0; i<${nr}; i++)); do
-			if [[ "$(eval "echo \${${1}}")" == "$(eval "echo \${${ENGINE}_${1}S[i]}")" ]]; then
-				if [[ -n "$(eval "echo \"\${${ENGINE}_${1}_COUNT}\"")" ]]; then
+			if [[ $(eval "echo \${${1}}") == $(eval "echo \${${ENGINE}_${1}S[i]}") ]]; then
+				if [[ -n $(eval "echo \"\${${ENGINE}_${1}_COUNT}\"") ]]; then
 					((i++))
 					eval "${1}=\"${i}\""
-				elif [[ -n "$(eval "echo \"\${${ENGINE}_${1}_VALUES}\"")" ]]; then
+				elif [[ -n $(eval "echo \"\${${ENGINE}_${1}_VALUES}\"") ]]; then
 					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
 				fi
 				return 0
 			fi
 		done
 	else
-		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
+		[[ $(eval echo "\${${1}_SET}") != 0 ]] && return 0
 	fi
 	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(getrecipient).\n" >&2
 	show ${1}S "${2}" >&2
@@ -254,7 +254,7 @@ geturl() {
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verifyurl() {
 	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
-	[[ -n ${KNOWN} ]] && [[ ${KNOWN} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
+	[[ -n ${KNOWN} && ${KNOWN} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
 }
 
 # if possible convert URL to raw
@@ -281,7 +281,7 @@ while [[ -n ${1} ]]; do
 		;;
 		--debug )
 		set -x
-		DEBUG=true
+		DEBUG=0
 		;;
 		--*=* )
 		ARGS[${#ARGS[*]}]="${1%%=*}"
@@ -339,14 +339,14 @@ while [[ -n ${1} ]]; do
 		shift 2
 		;;
 		-E | --list-expiration )
-		LIST_EXPIRATION=true
+		LIST_EXPIRATION=0
 		shift
 		;;
 		-h | --help )
 		usage && exit 0
 		;;
 		-i | --info )
-		INFO=true
+		INFO=0
 		shift
 		;;
 		-I | --info-only )
@@ -360,7 +360,7 @@ while [[ -n ${1} ]]; do
 		shift 2
 		;;
 		-L | --list-languages )
-		LIST_LANGUAGES=true
+		LIST_LANGUAGES=0
 		shift
 		;;
 		-n | --nick )
@@ -369,7 +369,7 @@ while [[ -n ${1} ]]; do
 		shift 2
 		;;
 		-r | --raw )
-		RAW=true
+		RAW=0
 		shift
 		;;
 		-s | --service )
@@ -379,11 +379,11 @@ while [[ -n ${1} ]]; do
 		shift 2
 		;;
 		-S | --list-services )
-		SHOW_SERVICES=true
+		SHOW_SERVICES=0
 		shift
 		;;
 		-v | --verbose )
-		VERBOSE=true
+		VERBOSE=0
 		shift
 		;;
 		--version )
@@ -568,7 +568,7 @@ verifyurl
 
 # handle the case when there was no location returned
 if [[ -z ${URL} ]]; then
-	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
+	if [[ ${DEBUG} || ${VERBOSE} ]]; then
 		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
 		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" >&2
