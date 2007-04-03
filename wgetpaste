@@ -20,7 +20,7 @@ escape() {
 }	
 
 showurl() {
-	[[ "$(type -t add_to_clipboard)" == "function" ]] && add_to_clipboard "${1}"
+	[[ function == $(type -t add_to_clipboard) ]] && add_to_clipboard "${1}"
 	echo "Your ${2}paste can be seen here: ${1}"
 }
 
@@ -86,7 +86,7 @@ osl_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
 # Likewise if get_from_clipboard() is defined as a function in one of those files it will be
 # called to retrieve input from your clipboard when --xcut is used.
 for f in {/etc/,~/.}wgetpaste{,/*.bash}; do
-	[[ -f "${f}" ]] && . "${f}"
+	[[ -f ${f} ]] && . "${f}"
 done
 DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
 DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
@@ -135,8 +135,8 @@ show() {
 	echo "${1:0:1}${2:1}s supported by $(get_recipient) (case sensitive):"
 	local nr extra
 	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
-	[[ "${2}" == expiration* ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
-	[[ ${nr} -eq 0 ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." >&2
+	[[ EXPIRATIONS == ${1} ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
+	[[ 0 -eq ${nr} ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." >&2
 	for ((i=0; i<${nr}; i++)); do
 		eval "echo \"    \${${ENGINE}_${1}[i]}\""
 	done | ${3:-cat}
@@ -168,7 +168,7 @@ show_services() {
 
 verify_service() {
 	for s in "${SERVICES[@]}"; do
-		[[ "$*" == "${s}" ]] && return 0
+		[[ ${s} == $* ]] && return 0
 	done
 	echo -e "\"$*\" is not a supported service.\n" >&2
 	show_services >&2
@@ -201,13 +201,13 @@ verify() {
 
 # get the url to post to for any given service
 get_recipient() {
-	if [[ "${1}" == "RAW" ]]; then
+	if [[ RAW == ${1} ]]; then
 		local TARGET="$(eval "echo \"\${${SERVICE}[2]}\"")"
 	else
 		local SERV="${SERVICE}: "
 	fi
 	for s in "${SERVICES[@]}"; do
-		[[ "${SERVICE}" == "${s}" ]] && eval "echo \"${SERV}\${${s}[1]}${TARGET}\"" && return 0
+		[[ ${s} == ${SERVICE} ]] && eval "echo \"${SERV}\${${s}[1]}${TARGET}\"" && return 0
 	done
 	die "Failed to get url for \"${SERVICE}\"."
 }
@@ -222,31 +222,31 @@ warn_size() {
 		fi
 	}
 	local LIMIT="$(eval "echo \"\${${ENGINE}_WARNS[0]}\"")"
-	[[ -n "${LIMIT}" ]] && warn "${LIMIT}" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
+	[[ -n ${LIMIT} ]] && warn "${LIMIT}" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
 }
 
 post_data() {
 	local extra field sep nr
-	[[ $(eval "echo \"\${#${ENGINE}_POST[*]}\"") != 7 ]] && die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
+	[[ 7 -eq $(eval "echo \"\${#${ENGINE}_POST[*]}\"") ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 	extra="$(eval "echo -n \"\${${ENGINE}_POST[0]}\"")"
 	sep="&"
 	nr=${#engines_POST[*]}
-	[[ -n "${extra}" ]] && echo -n "${extra}${sep}"
+	[[ -n ${extra} ]] && echo -n "${extra}${sep}"
 	for ((i=1; i<${nr}; i++)); do
 		field="$(eval "echo \${${ENGINE}_POST[i]}")"
 		[[ ${i} -eq ${nr}-1 ]] && sep=$'\n'
-		[[ -z "${field}" ]] && continue
+		[[ -z ${field} ]] && continue
 		eval "echo -n \"${field}=\${${engines_POST[i]}}\${sep}\""
 	done
 }
 
 get_url() {
 	local GET="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
-	if [[ -n "${GET}" ]]; then
-		[[ "${1}" == "need_stdout" ]] && return 0
+	if [[ -n ${GET} ]]; then
+		[[ need_stdout == ${1} ]] && return 0
 		echo "$*" | sed -n "${GET}"
 	else
-		[[ "${1}" == "need_stdout" ]] && return 1
+		[[ need_stdout == ${1} ]] && return 1
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 	fi
 }
@@ -254,13 +254,13 @@ get_url() {
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verify_url() {
 	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
-	[[ -n "${KNOWN}" ]] && [[ "${URL}" == "${KNOWN}" ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
+	[[ -n ${KNOWN} ]] && [[ ${KNOWN} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
 }
 
 # if possible convert URL to raw
 convert_to_raw() {
 	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
-	if [[ -n "${CONVERT}" ]]; then
+	if [[ -n ${CONVERT} ]]; then
 		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
 		return 0
 	fi
@@ -271,7 +271,7 @@ convert_to_raw() {
 ### read cli options
 
 # convert groups of short options to singular short options. convert long options to short options.
-while [[ -n "${1}" ]]; do
+while [[ -n ${1} ]]; do
 	case "${1}" in
 		-- )
 		for arg in "${@}"; do
@@ -309,31 +309,31 @@ no_argument() {
 }
 
 get_filename() {
-	for file in "${@}"; do
-		[[ -f "${file}" ]] || die "${0}: ${1} No such file found."
+	for f in "${@}"; do
+		[[ -f ${f} ]] || die "${0}: ${f} No such file found."
 		SOURCE="files"
-		FILES[${#FILES[*]}]="${file}"
+		FILES[${#FILES[*]}]="${f}"
 	done
 }
 
-while [[ -n "${1}" ]]; do
+while [[ -n ${1} ]]; do
 	case "${1}" in
 		-- )
 		shift && get_filename "${@}" && break
 		;;
 		-c | --command )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="${2}"
 		shift 2
 		;;
 		-d | --description )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		DESCRIPTION="${2}"
 		shift 2
 		;;
 		-e | --expiration )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		EXPIRATION_SET=0
 		EXPIRATION="${2}"
 		shift 2
@@ -354,7 +354,7 @@ while [[ -n "${1}" ]]; do
 		shift
 		;;
 		-l | --language )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		LANGUAGE_SET=0
 		LANGUAGE="${2}"
 		shift 2
@@ -364,7 +364,7 @@ while [[ -n "${1}" ]]; do
 		shift
 		;;
 		-n | --nick )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
@@ -373,7 +373,7 @@ while [[ -n "${1}" ]]; do
 		shift
 		;;
 		-s | --service )
-		[[ -z "${2}" ]] && no_argument "${1}"
+		[[ -z ${2} ]] && no_argument "${1}"
 		verify_service "${2}"
 		SERVICE="$(escape "${2}")"
 		shift 2
@@ -410,9 +410,9 @@ done
 # set default service, nick, source and tabs convertion
 SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
 ENGINE="$(eval "echo \${${SERVICE}[0]}")"
-[[ -n "$(eval "echo \${DEFAULT_NICK_${SERVICE}}")" ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
+[[ -n $(eval "echo \${DEFAULT_NICK_${SERVICE}}") ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
 NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
-[[ -z "${SOURCE}" ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
+[[ -z ${SOURCE} ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS="No"
 
 # show languages if requested (needs to be done after the right service is selected)
@@ -436,14 +436,14 @@ verify EXPIRATION "expiration option"
 EXPIRATION="$(escape "${EXPIRATION}")"
 
 # set prompt
-if [[ ${UID} == 0 ]]; then
+if [[ 0 -eq ${UID} ]]; then
 	PS1="#"
 else
 	PS1="$"
 fi
 
 # set default description
-if [[ -z "${DESCRIPTION}" ]]; then
+if [[ -z ${DESCRIPTION} ]]; then
 	case "${SOURCE}" in
 		info )
 		DESCRIPTION="${PS1} ${INFO_COMMAND};"
@@ -474,7 +474,7 @@ case "${SOURCE}" in
 	INPUT="${PS1} ${INFO_COMMAND}"$'\n'"$(${INFO_COMMAND} ${INFO_ARGS})"
 	;;
 	xcut )
-	if [[ "$(type -t get_from_clipboard)" == "function" ]]; then
+	if [[ function == $(type -t get_from_clipboard) ]]; then
 		INPUT="$(get_from_clipboard)"
 	else
 		cat <<EOF
@@ -502,7 +502,7 @@ EOF
 	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
 	if [[ ${#FILES[*]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
-			[[ -r "${f}" ]] || \
+			[[ -r ${f} ]] || \
 				die "The input source: \"${f}\" is not readable. Please specify a readable input source."
 			INPUT="${INPUT}${PS1} cat ${f}"$'\n'"$( < "${f}" )"$'\n\n'
 		done
@@ -511,7 +511,7 @@ EOF
 	fi
 	;;
 esac
-[[ -z "${INPUT}" ]] && die "No input read. Nothing to paste. Aborting."
+[[ -z ${INPUT} ]] && die "No input read. Nothing to paste. Aborting."
 
 # append ${INFO_COMMAND} if needed
 if [[ ${INFO} ]]; then
@@ -529,7 +529,7 @@ warn_size >&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
-if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
+if [[ -f ${TEMPFILE} ]]; then
     # write paste data to the temporary file
     post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
     WGET_ARGS="--post-file=${TEMPFILE}"
@@ -551,7 +551,7 @@ else
 fi
 
 # clean temporary file if it was created
-if [[ -n "${TEMPFILE}" ]] && [[ -f "${TEMPFILE}" ]]; then
+if [[ -f ${TEMPFILE} ]]; then
 	if [[ ${DEBUG} ]]; then
 		echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
 	else
@@ -567,7 +567,7 @@ URL="$(get_url "${OUTPUT}")"
 verify_url
 
 # handle the case when there was no location returned
-if [[ -z "${URL}" ]]; then
+if [[ -z ${URL} ]]; then
 	if [[ ${DEBUG} ]] || [[ ${VERBOSE} ]]; then
 		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
 	else
