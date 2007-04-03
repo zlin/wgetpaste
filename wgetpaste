@@ -544,7 +544,7 @@ RECIPIENT="$(getrecipient RAW)"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
-if geturl needstdout || [[ ${DEBUG} ]] || [[ ! -w /dev/null ]]; then
+if geturl needstdout || [[ ${DEBUG} || ! -w /dev/null ]]; then
 	OUTPUT="$(wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
 	OUTPUT="$(wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
