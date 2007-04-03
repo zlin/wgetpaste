@@ -132,7 +132,7 @@ EOF
 ### show functions
 
 show() {
-	echo "${1:0:1}${2:1}s supported by $(get_recipient) (case sensitive):"
+	echo "${1:0:1}${2:1}s supported by $(getrecipient) (case sensitive):"
 	local nr extra
 	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
 	[[ EXPIRATIONS == ${1} ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
@@ -192,7 +192,7 @@ verify() {
 	else
 		[[ "$(eval echo "\${${1}_SET}")" != 0 ]] && return 0
 	fi
-	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(get_recipient).\n" >&2
+	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(getrecipient).\n" >&2
 	show ${1}S "${2}" >&2
 	exit 1
 }
@@ -200,7 +200,7 @@ verify() {
 ### Posting helper functions
 
 # get the url to post to for any given service
-get_recipient() {
+getrecipient() {
 	if [[ RAW == ${1} ]]; then
 		local TARGET="$(eval "echo \"\${${SERVICE}[2]}\"")"
 	else
@@ -214,7 +214,7 @@ get_recipient() {
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
 # service in that regard. note that this is only a warning printed. it doesn't abort.
-warn_size() {
+warnsize() {
 	warn() {
 		if [[ ${SIZE} -gt ${1} ]]; then
 			echo "Pasting > ${2} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
@@ -225,7 +225,7 @@ warn_size() {
 	[[ -n ${LIMIT} ]] && warn "${LIMIT}" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
 }
 
-post_data() {
+postdata() {
 	local extra field sep nr
 	[[ 7 -eq $(eval "echo \"\${#${ENGINE}_POST[*]}\"") ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 	extra="$(eval "echo -n \"\${${ENGINE}_POST[0]}\"")"
@@ -240,19 +240,19 @@ post_data() {
 	done
 }
 
-get_url() {
+geturl() {
 	local GET="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
 	if [[ -n ${GET} ]]; then
-		[[ need_stdout == ${1} ]] && return 0
+		[[ needstdout == ${1} ]] && return 0
 		echo "$*" | sed -n "${GET}"
 	else
-		[[ need_stdout == ${1} ]] && return 1
+		[[ needstdout == ${1} ]] && return 1
 		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
 	fi
 }
 
 # verify that the pastebin service didn't return a known error url or print a helpful error message
-verify_url() {
+verifyurl() {
 	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
 	[[ -n ${KNOWN} ]] && [[ ${KNOWN} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
 }
@@ -261,10 +261,10 @@ verify_url() {
 convert_to_raw() {
 	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
 	if [[ -n ${CONVERT} ]]; then
-		RAW_URL="$(echo "${URL}" | sed -e "${CONVERT}")"
+		RAWURL="$(echo "${URL}" | sed -e "${CONVERT}")"
 		return 0
 	fi
-	echo "Raw download of pastes is not supported by $(get_recipient)." >&2
+	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
 	return 1
 }
 
@@ -291,8 +291,8 @@ while [[ -n ${1} ]]; do
 		ARGS[${#ARGS[*]}]="${1}"
 		;;
 		-* )
-		for short_arg in $(echo "${1#-}" | sed 's|.| -&|g'); do
-			ARGS[${#ARGS[*]}]="${short_arg}"
+		for shortarg in $(echo "${1#-}" | sed 's|.| -&|g'); do
+			ARGS[${#ARGS[*]}]="${shortarg}"
 		done
 		;;
 		* )
@@ -304,11 +304,11 @@ done
 # set the converted options as input
 set -- "${ARGS[@]}"
 
-no_argument() {
+noargument() {
 	die "${0}: option ${1} requires an argument"
 }
 
-get_filename() {
+getfilenames() {
 	for f in "${@}"; do
 		[[ -f ${f} ]] || die "${0}: ${f} No such file found."
 		SOURCE="files"
@@ -319,21 +319,21 @@ get_filename() {
 while [[ -n ${1} ]]; do
 	case "${1}" in
 		-- )
-		shift && get_filename "${@}" && break
+		shift && getfilenames "${@}" && break
 		;;
 		-c | --command )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="${2}"
 		shift 2
 		;;
 		-d | --description )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		DESCRIPTION="${2}"
 		shift 2
 		;;
 		-e | --expiration )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		EXPIRATION_SET=0
 		EXPIRATION="${2}"
 		shift 2
@@ -354,7 +354,7 @@ while [[ -n ${1} ]]; do
 		shift
 		;;
 		-l | --language )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		LANGUAGE_SET=0
 		LANGUAGE="${2}"
 		shift 2
@@ -364,7 +364,7 @@ while [[ -n ${1} ]]; do
 		shift
 		;;
 		-n | --nick )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		NICK="$(escape "${2}")"
 		shift 2
 		;;
@@ -373,7 +373,7 @@ while [[ -n ${1} ]]; do
 		shift
 		;;
 		-s | --service )
-		[[ -z ${2} ]] && no_argument "${1}"
+		[[ -z ${2} ]] && noargument "${1}"
 		verify_service "${2}"
 		SERVICE="$(escape "${2}")"
 		shift 2
@@ -397,7 +397,7 @@ while [[ -n ${1} ]]; do
 		die "${0}: unrecognized option \`${1}'"
 		;;
 		*)
-		get_filename "${1}" && shift
+		getfilenames "${1}" && shift
 		;;
 	esac
 done
@@ -525,26 +525,26 @@ INPUT="$(escape "${INPUT}")"
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
 SIZE=$(echo "${INPUT}" | wc -c)
-warn_size >&2
+warnsize >&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
 TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
 if [[ -f ${TEMPFILE} ]]; then
     # write paste data to the temporary file
-    post_data > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+    postdata > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
     WGET_ARGS="--post-file=${TEMPFILE}"
 else
 	# fall back to using --post-data if the temporary file could not be created
 	# TABs and new lines need to be escaped for wget to interpret it as one string
-    WGET_ARGS="--post-data=$(post_data | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
+    WGET_ARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 fi
 
 # set recipient
-RECIPIENT="$(get_recipient RAW)"
+RECIPIENT="$(getrecipient RAW)"
 
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
-if get_url need_stdout || [[ ${DEBUG} ]] || [[ ! -w /dev/null ]]; then
+if geturl needstdout || [[ ${DEBUG} ]] || [[ ! -w /dev/null ]]; then
 	OUTPUT="$(wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
 	OUTPUT="$(wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
@@ -560,11 +560,11 @@ if [[ -f ${TEMPFILE} ]]; then
 fi
 
 # get the url
-URL="$(get_url "${OUTPUT}")"
+URL="$(geturl "${OUTPUT}")"
 
 # verify that the pastebin service didn't return a known error url such as toofast.html from rafb
 # uses ${SERVICE} and ${URL}.
-verify_url
+verifyurl
 
 # handle the case when there was no location returned
 if [[ -z ${URL} ]]; then
@@ -576,9 +576,9 @@ if [[ -z ${URL} ]]; then
 	fi
 fi
 
-# convert_to_raw() may change the value of RAW. Otherwise it set RAW_URL.
+# convert_to_raw() may change the value of RAW. Otherwise it set RAWURL.
 if [[ ${RAW} ]] && convert_to_raw; then
-	showurl "${RAW_URL}" "raw "
+	showurl "${RAWURL}" "raw "
 else
 	showurl "${URL}"
 fi
