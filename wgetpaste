@@ -124,8 +124,8 @@ Options:
     -h, --help                    show this help
         --version                 show version information
 
-Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be
-overridden globally in /etc/wgetpaste or per user in ~/.wgetpaste.
+Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
+globally in /etc/wgetpaste{,/*.bash} or per user in ~/.wgetpaste{,/*.bash}.
 EOF
 }
 
