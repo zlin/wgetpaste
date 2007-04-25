@@ -61,9 +61,9 @@ ca_EXPIRATIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes
 3\ months 4\ months 5\ months 6\ months 1\ year)
 osl_EXPIRATIONS=(Never 1\ day 1\ month)
 osl_EXPIRATION_VALUES=(f d m)
-# warns
+# warns - max_bytes human_readable max_lines known_failure known_failure_message known_failure2 known_failure2_message ...
 ca_WARNS=(1024000 1\ MB)
-rafb_WARNS=(512000 512\ kB http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds.")
+rafb_WARNS=(800000 800\ kB 10000 http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds." http://rafb.net/p/toobig.html "The paste is too big. Try another service or paste smaller chunks of data.")
 # POST data
 engines_POST=(EXTRA NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS)
 ca_POST=(s=Submit+Post name description type expiry "" content)
@@ -216,13 +216,14 @@ getrecipient() {
 # service in that regard. note that this is only a warning printed. it doesn't abort.
 warnsize() {
 	warn() {
-		if [[ ${SIZE} -gt ${1} ]]; then
-			echo "Pasting > ${2} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
+		if [[ -n ${2} && ${1} -gt ${2} ]]; then
+			echo "Pasting > ${3} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
 			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
 		fi
 	}
-	local LIMIT="$(eval "echo \"\${${ENGINE}_WARNS[0]}\"")"
-	[[ -n ${LIMIT} ]] && warn "${LIMIT}" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
+	warn "${SIZE}" "$(eval "echo \"\${${ENGINE}_WARNS[0]}\"")" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
+	local LIMIT_LINES="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
+	warn "${LINES}" "${LIMIT_LINES}" "${LIMIT_LINES} lines"
 }
 
 postdata() {
@@ -252,8 +253,12 @@ geturl() {
 
 # verify that the pastebin service didn't return a known error url or print a helpful error message
 verifyurl() {
-	local KNOWN="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
-	[[ -n ${KNOWN} && ${KNOWN} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[3]}\"")"
+	local urls i known
+	(( urls=($(eval "echo \"\${#${ENGINE}_WARNS[@]}\"")-3)/2 ))
+	for((i=0;i<urls;i++)); do
+		known="$(eval "echo \"\${${ENGINE}_WARNS[3+2*i]}\"")"
+		[[ -n ${known} && ${known} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[4+2*i]}\"")"
+	done
 }
 
 # if possible convert URL to raw
@@ -524,6 +529,7 @@ INPUT="$(escape "${INPUT}")"
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
 SIZE=$(echo "${INPUT}" | wc -c)
+LINES=$(echo "${INPUT}" | wc -l)
 warnsize >&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
