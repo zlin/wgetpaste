@@ -1,0 +1,591 @@
+#!/bin/bash
+# A Script that automates pasting to a number of pastebin services
+# relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami) and wget
+# Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
+# Distributed as-is. With no warranties.
+
+VERSION="@VERSION@"
+
+### helper functions
+
+# show error message(s) and die
+die() {
+	echo "${@}" >&2
+	exit 1
+}
+
+# escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
+escape() {
+	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
+}	
+
+showurl() {
+	[[ function == $(type -t add_to_clipboard) ]] && add_to_clipboard "${1}"
+	echo "Your ${2}paste can be seen here: ${1}"
+}
+
+# Used for --info and --info-only
+INFO_COMMAND="emerge --info"
+INFO_ARGS="--ignore-default-opts"
+
+### service definitions
+
+SERVICES=(ca rafb osl sh)
+
+# ENGINE URL RAW EXPIRE_INFO
+ca=(ca http://pastebin.ca/)
+rafb=(rafb http://rafb.net/paste/ paste.php "Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.\n")
+osl=(osl http://pastebin.osuosl.org/ pastebin.php)
+sh=(sh http://sh.nu/p/)
+
+### engine definitions
+
+# languages
+ca_LANGUAGES=(Plain\ Text Asterisk\ Configuration C C++ PHP Perl Java VB C\# Ruby Python Pascal \
+mIRC PL/I XML SQL Scheme ActionScript Ada Apache\ Configuration Assembly\ \(NASM\) ASP Bash CSS \
+Delphi HTML\ 4\.0\ Strict JavaScript LISP Lua Microprocessor\ ASM Objective\ C VB\.NET)
+ca_LANGUAGE_COUNT=0
+rafb_LANGUAGES=(C C89 C99 C++ C\# Java Pascal Perl PHP PL\/I Python Ruby SQL VB Plain\ Text)
+osl_LANGUAGES=(Plain\ Text ActionScript Ada Apache\ Log\ File AppleScript Assembly\ \(NASM\) \
+ASP Bash C C\ for\ Macs CAD\ DCL CAD\ Lisp C++ C\# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
+FreeBasic Game\ Maker HTML\ 4\.0\ Strict INI\ file Java Javascript Lisp Lua MatLab Microprocessor\ ASM \
+MySQL NullSoft\ Installer Objective\ C OCaml Openoffice\.org\ BASIC Oracle\ 8 Pascal Perl PHP Python \
+QBasic Robots\.txt Ruby Scheme Smarty SQL TCL VB VB\.NET VisualFoxPro XML)
+osl_LANGUAGE_VALUES=(text actionscript ada apache applescript asm asp bash c c\ mac caddcl \
+cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
+javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
+qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml)
+# expirations
+ca_EXPIRATIONS=(Never 5\ minutes 10\ minutes 15\ minutes 30\ minutes 45\ minutes 1\ hour 2\ hours \
+4\ hours 8\ hours 12\ hours 1\ day 2\ days 3\ days 1\ week 2\ weeks 3\ weeks 1\ month 2\ months \
+3\ months 4\ months 5\ months 6\ months 1\ year)
+osl_EXPIRATIONS=(Never 1\ day 1\ month)
+osl_EXPIRATION_VALUES=(f d m)
+# warns - max_bytes human_readable max_lines known_failure known_failure_message known_failure2 known_failure2_message ...
+ca_WARNS=(1024000 1\ MB)
+rafb_WARNS=(800000 800\ kB 10000 http://rafb.net/p/toofast.html "You must wait at least 10 seconds between each paste! Try again in 10 seconds." http://rafb.net/p/toobig.html "The paste is too big. Try another service or paste smaller chunks of data.")
+# POST data
+engines_POST=(EXTRA NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS)
+ca_POST=(s=Submit+Post name description type expiry "" content)
+rafb_POST=("" nick desc lang "" cvt_tabs text)
+osl_POST=(paste=Send poster "" format expiry "" code2)
+sh_POST=("" poster "" "" "" "" code)
+# regex'es
+ca_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|' 's|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p')
+rafb_REGEX=('s|html\?$|txt|')
+osl_REGEX=('s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|')
+
+### defaults
+
+# The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
+#
+# If add_to_clipboard() is defined as a function in one of those files it will be called with
+# the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
+# whatever your window manager provides for adding it to your clipboard.
+#
+# Likewise if get_from_clipboard() is defined as a function in one of those files it will be
+# called to retrieve input from your clipboard when --xcut is used.
+for f in {/etc/,~/.}wgetpaste{,/*.bash}; do
+	[[ -f ${f} ]] && . "${f}"
+done
+DEFAULT_NICK="${DEFAULT_NICK:-$(whoami)}"
+DEFAULT_SERVICE="${DEFAULT_SERVICE:-rafb}"
+DEFAULT_LANGUAGE="${DEFAULT_LANGUAGE:-Plain Text}"
+DEFAULT_EXPIRATION="${DEFAULT_EXPIRATION:-1 month}"
+# setting e.g. DEFAULT_EXPIRATION_${SERVICE} can be used to override the default setting for
+# just one service
+
+### usage
+
+usage() {
+	cat <<EOF
+Usage: ${0} [options] [file[s]]
+
+Options:
+    -l, --language LANG           set language (defaults to "${DEFAULT_LANGUAGE}")
+    -d, --description DESCRIPTION set description (defaults to "stdin" or filename)
+    -n, --nick NICK               set nick (defaults to your username))
+    -s, --service SERVICE         set service to use (defaults to "${DEFAULT_SERVICE}")
+    -e, --expiration EXPIRATION   set when it should expire (defaults to "${DEFAULT_EXPIRATION}")
+
+    -S, --list-services           list supported pastebin services
+    -L, --list-languages          list languages supported by the specified service
+    -E, --list-expiration         list expiration setting supported by the specified service
+
+    -c, --command COMMAND         paste COMMAND and the output of COMMAND
+    -i, --info                    append the output of \`${INFO_COMMAND}\`
+    -I, --info-only               paste the output of \`${INFO_COMMAND}\` only
+    -x, --xcut                    read input from clipboard (requires configuration)
+
+    -r, --raw                     show url for the raw paste (no syntax highlighting or html)
+    -v, --verbose                 show wget stderr output if no url is received
+        --debug                   be *very* verbose (implies -v)
+
+    -h, --help                    show this help
+        --version                 show version information
+
+Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
+globally in /etc/wgetpaste{,/*.bash} or per user in ~/.wgetpaste{,/*.bash}.
+EOF
+}
+
+### show functions
+
+show() {
+	echo "${1:0:1}${2:1}s supported by $(getrecipient) (case sensitive):"
+	local nr extra
+	nr="$(eval "echo \${#${ENGINE}_${1}[*]}")"
+	[[ EXPIRATIONS == ${1} ]] && extra="$(eval "echo \${${SERVICE}[3]}")"
+	[[ 0 -eq ${nr} ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." >&2
+	for ((i=0; i<${nr}; i++)); do
+		eval "echo \"    \${${ENGINE}_${1}[i]}\""
+	done | ${3:-cat}
+}
+
+show_services() {
+	echo "Services supported: (case sensitive):"
+	local max arg IND INDV engine
+	max=0
+	for arg in "${SERVICES[@]}"; do
+		[[ ${#arg} -gt ${max} ]] && max=${#arg}
+	done
+	((IND=6+${max}))
+	if [[ ${VERBOSE} ]]; then
+		max=0
+		for s in "${SERVICES[@]}"; do
+			arg=$(eval "echo \${${s}[1]}")
+			[[ ${#arg} -gt ${max} ]] && max=${#arg}
+		done
+		((INDV=3+${max}+${IND}))
+	fi
+	for ((i=0; i<${#SERVICES[*]}; i++)); do
+		[[ ${VERBOSE} ]] && eval "engine=$'\e'\"[${INDV}G- \${${SERVICES[i]}[0]}\""
+		eval "echo -e \"    ${SERVICES[i]} \e[${IND}G- \${${SERVICES[i]}[1]}${engine}\""
+	done | sort
+}
+
+### verify functions
+
+verify_service() {
+	for s in "${SERVICES[@]}"; do
+		[[ ${s} == $* ]] && return 0
+	done
+	echo -e "\"$*\" is not a supported service.\n" >&2
+	show_services >&2
+	exit 1
+}
+
+verify() {
+	local nr="$(eval echo \${#${ENGINE}_${1}S[*]})"
+	if [[ ${nr} -gt 0 ]]; then
+		for ((i=0; i<${nr}; i++)); do
+			if [[ $(eval "echo \${${1}}") == $(eval "echo \${${ENGINE}_${1}S[i]}") ]]; then
+				if [[ -n $(eval "echo \"\${${ENGINE}_${1}_COUNT}\"") ]]; then
+					((i++))
+					eval "${1}=\"${i}\""
+				elif [[ -n $(eval "echo \"\${${ENGINE}_${1}_VALUES}\"") ]]; then
+					eval "${1}=\${${ENGINE}_${1}_VALUES[i]}"
+				fi
+				return 0
+			fi
+		done
+	else
+		[[ $(eval echo "\${${1}_SET}") != 0 ]] && return 0
+	fi
+	echo -e "\"$(eval echo \${${1}})\" is not a supported ${2} for $(getrecipient).\n" >&2
+	show ${1}S "${2}" >&2
+	exit 1
+}
+
+### Posting helper functions
+
+# get the url to post to for any given service
+getrecipient() {
+	if [[ RAW == ${1} ]]; then
+		local TARGET="$(eval "echo \"\${${SERVICE}[2]}\"")"
+	else
+		local SERV="${SERVICE}: "
+	fi
+	for s in "${SERVICES[@]}"; do
+		[[ ${s} == ${SERVICE} ]] && eval "echo \"${SERV}\${${s}[1]}${TARGET}\"" && return 0
+	done
+	die "Failed to get url for \"${SERVICE}\"."
+}
+
+# print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
+# service in that regard. note that this is only a warning printed. it doesn't abort.
+warnsize() {
+	warn() {
+		if [[ -n ${2} && ${1} -gt ${2} ]]; then
+			echo "Pasting > ${3} often tend to fail with ${SERVICE}. Use --verbose or --debug to see the"
+			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+		fi
+	}
+	warn "${SIZE}" "$(eval "echo \"\${${ENGINE}_WARNS[0]}\"")" "$(eval "echo \"\${${ENGINE}_WARNS[1]}\"")"
+	local LIMIT_LINES="$(eval "echo \"\${${ENGINE}_WARNS[2]}\"")"
+	warn "${LINES}" "${LIMIT_LINES}" "${LIMIT_LINES} lines"
+}
+
+postdata() {
+	local extra field sep nr
+	[[ 7 -eq $(eval "echo \"\${#${ENGINE}_POST[*]}\"") ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
+	extra="$(eval "echo -n \"\${${ENGINE}_POST[0]}\"")"
+	nr=${#engines_POST[*]}
+	[[ -n ${extra} ]] && echo -n "${extra}&"
+	for ((i=1; i<${nr}; i++)); do
+		field="$(eval "echo \${${ENGINE}_POST[i]}")"
+		[[ -z ${field} ]] && continue
+		eval "echo -n \"${field}=\${${engines_POST[i]}}&\""
+	done
+	echo "$(eval "echo \${${ENGINE}_POST[i]}")=${INPUT}"
+}
+
+geturl() {
+	local GET="$(eval "echo \"\${${ENGINE}_REGEX[1]}\"")"
+	if [[ -n ${GET} ]]; then
+		[[ needstdout == ${1} ]] && return 0
+		echo "$*" | sed -n "${GET}"
+	else
+		[[ needstdout == ${1} ]] && return 1
+		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
+	fi
+}
+
+# verify that the pastebin service didn't return a known error url or print a helpful error message
+verifyurl() {
+	local urls i known
+	(( urls=($(eval "echo \"\${#${ENGINE}_WARNS[@]}\"")-3)/2 ))
+	for((i=0;i<urls;i++)); do
+		known="$(eval "echo \"\${${ENGINE}_WARNS[3+2*i]}\"")"
+		[[ -n ${known} && ${known} == ${URL} ]] && die "$(eval "echo \"\${${ENGINE}_WARNS[4+2*i]}\"")"
+	done
+}
+
+# if possible convert URL to raw
+convert_to_raw() {
+	local CONVERT="$(eval "echo \"\${${ENGINE}_REGEX[0]}\"")"
+	if [[ -n ${CONVERT} ]]; then
+		RAWURL="$(echo "${URL}" | sed -e "${CONVERT}")"
+		return 0
+	fi
+	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
+	return 1
+}
+
+### read cli options
+
+# convert groups of short options to singular short options. convert long options to short options.
+while [[ -n ${1} ]]; do
+	case "${1}" in
+		-- )
+		for arg in "${@}"; do
+			ARGS[${#ARGS[*]}]="${arg}"
+		done
+		break
+		;;
+		--debug )
+		set -x
+		DEBUG=0
+		;;
+		--*=* )
+		ARGS[${#ARGS[*]}]="${1%%=*}"
+		ARGS[${#ARGS[*]}]="${1#*=}"
+		;;
+		--* )
+		ARGS[${#ARGS[*]}]="${1}"
+		;;
+		-* )
+		for shortarg in $(echo "${1#-}" | sed 's|.| -&|g'); do
+			ARGS[${#ARGS[*]}]="${shortarg}"
+		done
+		;;
+		* )
+		ARGS[${#ARGS[*]}]="${1}"
+	esac
+	shift
+done
+
+# set the converted options as input
+set -- "${ARGS[@]}"
+
+noargument() {
+	die "${0}: option ${1} requires an argument"
+}
+
+getfilenames() {
+	for f in "${@}"; do
+		[[ -f ${f} ]] || die "${0}: ${f} No such file found."
+		SOURCE="files"
+		FILES[${#FILES[*]}]="${f}"
+	done
+}
+
+while [[ -n ${1} ]]; do
+	case "${1}" in
+		-- )
+		shift && getfilenames "${@}" && break
+		;;
+		-c | --command )
+		[[ -z ${2} ]] && noargument "${1}"
+		SOURCE="command"
+		COMMANDS[${#COMMANDS[*]}]="${2}"
+		shift 2
+		;;
+		-d | --description )
+		[[ -z ${2} ]] && noargument "${1}"
+		DESCRIPTION="${2}"
+		shift 2
+		;;
+		-e | --expiration )
+		[[ -z ${2} ]] && noargument "${1}"
+		EXPIRATION_SET=0
+		EXPIRATION="${2}"
+		shift 2
+		;;
+		-E | --list-expiration )
+		LIST_EXPIRATION=0
+		shift
+		;;
+		-h | --help )
+		usage && exit 0
+		;;
+		-i | --info )
+		INFO=0
+		shift
+		;;
+		-I | --info-only )
+		SOURCE="info"
+		shift
+		;;
+		-l | --language )
+		[[ -z ${2} ]] && noargument "${1}"
+		LANGUAGE_SET=0
+		LANGUAGE="${2}"
+		shift 2
+		;;
+		-L | --list-languages )
+		LIST_LANGUAGES=0
+		shift
+		;;
+		-n | --nick )
+		[[ -z ${2} ]] && noargument "${1}"
+		NICK="$(escape "${2}")"
+		shift 2
+		;;
+		-r | --raw )
+		RAW=0
+		shift
+		;;
+		-s | --service )
+		[[ -z ${2} ]] && noargument "${1}"
+		verify_service "${2}"
+		SERVICE="$(escape "${2}")"
+		shift 2
+		;;
+		-S | --list-services )
+		SHOW_SERVICES=0
+		shift
+		;;
+		-v | --verbose )
+		VERBOSE=0
+		shift
+		;;
+		--version )
+		echo "${0}, version ${VERSION}" && exit 0
+		;;
+		-x | --xcut )
+		SOURCE="xcut"
+		shift
+		;;
+		-* )
+		die "${0}: unrecognized option \`${1}'"
+		;;
+		*)
+		getfilenames "${1}" && shift
+		;;
+	esac
+done
+
+### everything below this should be independent of which service is being used...
+
+# show services if requested (need to respect --verbose if specified)
+[[ ${SHOW_SERVICES} ]] && show_services && exit 0
+
+# set default service, nick, source and tabs convertion
+SERVICE="${SERVICE:-${DEFAULT_SERVICE}}"
+ENGINE="$(eval "echo \${${SERVICE}[0]}")"
+[[ -n $(eval "echo \${DEFAULT_NICK_${SERVICE}}") ]] && NICK="${NICK:-$(eval "echo \${DEFAULT_NICK_${SERVICE}}")}"
+NICK="${NICK:-$(escape "${DEFAULT_NICK}")}"
+[[ -z ${SOURCE} ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
+CVT_TABS="No"
+
+# show languages if requested (needs to be done after the right service is selected)
+[[ ${LIST_LANGUAGES} ]] && show LANGUAGES language sort && exit 0
+
+# show expiration options if requested (needs to be done after the right service is selected)
+[[ ${LIST_EXPIRATION} ]] && show EXPIRATIONS "expiration option" && exit 0
+
+# language needs to be verified before it is escaped but after service is selected
+[[ -n "$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")" ]] && LANGUAGE="${LANGUAGE:-$(eval "echo \${DEFAULT_LANGUAGE_${SERVICE}}")}"
+LANGUAGE="${LANGUAGE:-${DEFAULT_LANGUAGE}}"
+# uses ${SERVICE} and ${LANGUAGE}. may change the value of the latter.
+verify LANGUAGE language
+LANGUAGE="$(escape "${LANGUAGE}")"
+
+# expiration needs to be verified before it is escaped but after service is selected
+[[ -n "$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")" ]] && EXPIRATION="${EXPIRATION:-$(eval "echo \${DEFAULT_EXPIRATION_${SERVICE}}")}"
+EXPIRATION="${EXPIRATION:-${DEFAULT_EXPIRATION}}"
+# uses ${SERVICE} and ${EXPIRATION}. may change the value of the latter.
+verify EXPIRATION "expiration option"
+EXPIRATION="$(escape "${EXPIRATION}")"
+
+# set prompt
+if [[ 0 -eq ${UID} ]]; then
+	PS1="#"
+else
+	PS1="$"
+fi
+
+# set default description
+if [[ -z ${DESCRIPTION} ]]; then
+	case "${SOURCE}" in
+		info )
+		DESCRIPTION="${PS1} ${INFO_COMMAND};"
+		;;
+		command )
+		DESCRIPTION="${PS1}"
+		for c in "${COMMANDS[@]}"; do
+			DESCRIPTION="${DESCRIPTION} ${c};"
+		done
+		;;
+		files )
+		DESCRIPTION="${FILES[*]}"
+		;;
+		* )
+		DESCRIPTION="${SOURCE}"
+		;;
+	esac
+fi
+
+# read input
+case "${SOURCE}" in
+	command )
+	for c in "${COMMANDS[@]}"; do
+		INPUT="${INPUT}${PS1} ${c}"$'\n'"$(bash -c "${c}" 2>&1)"$'\n\n'
+	done
+	;;
+	info )
+	INPUT="${PS1} ${INFO_COMMAND}"$'\n'"$(${INFO_COMMAND} ${INFO_ARGS})"
+	;;
+	xcut )
+	if [[ function == $(type -t get_from_clipboard) ]]; then
+		INPUT="$(get_from_clipboard)"
+	else
+		cat <<EOF
+You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use
+--xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:
+
+get_from_clipboard() {
+	xclip -o
+}
+
+Likewise if you want the resulting url stored in your clipboard using e.g. xclip
+define it like this:
+
+add_to_clipboard() {
+	xclip "\$*"
+}
+
+You may use whatever your window manager provides to alter your clipboard instead
+of xclip.
+EOF
+		exit 1
+	fi
+	;;
+	files | stdin )
+	# handle the case where the input source (defaulting to /dev/stdin) isn't readable verbosely
+	if [[ ${#FILES[*]} -gt 1 ]]; then
+		for f in "${FILES[@]}"; do
+			[[ -r ${f} ]] || \
+				die "The input source: \"${f}\" is not readable. Please specify a readable input source."
+			INPUT="${INPUT}${PS1} cat ${f}"$'\n'"$( < "${f}" )"$'\n\n'
+		done
+	else
+		INPUT="$( < "${FILES}" )"
+	fi
+	;;
+esac
+[[ -z ${INPUT} ]] && die "No input read. Nothing to paste. Aborting."
+
+# append ${INFO_COMMAND} if needed
+if [[ ${INFO} ]]; then
+	DESCRIPTION="${DESCRIPTION} ${PS1} ${INFO_COMMAND};"
+	INPUT="${INPUT}"$'\n'"${PS1} ${INFO_COMMAND}"$'\n'"$(${INFO_COMMAND} ${INFO_ARGS})"
+fi
+
+# escape DESCRIPTION and INPUT
+DESCRIPTION="$(escape "${DESCRIPTION}")"
+INPUT="$(escape "${INPUT}")"
+
+# print a friendly warning if the size makes failure predictable for the specified pastebin service.
+SIZE=$(echo "${INPUT}" | wc -c)
+LINES=$(echo "${INPUT}" | wc -l)
+warnsize >&2
+
+# create temp file (wget is much more reliable reading large input from a file than from the cli directly
+TEMPFILE="$(mktemp /tmp/wgetpaste.XXXXXX)"
+if [[ -f ${TEMPFILE} ]]; then
+    # write paste data to the temporary file
+    postdata > "${TEMPFILE}" || die "Failed to write to temporary file: \"${TEMPFILE}\"."
+    WGET_ARGS="--post-file=${TEMPFILE}"
+else
+	# fall back to using --post-data if the temporary file could not be created
+	# TABs and new lines need to be escaped for wget to interpret it as one string
+    WGET_ARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
+fi
+
+# set recipient
+RECIPIENT="$(getrecipient RAW)"
+
+# paste it
+WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
+if geturl needstdout || [[ ${DEBUG} || ! -w /dev/null ]]; then
+	OUTPUT="$(LC_ALL=C wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
+else
+	OUTPUT="$(LC_ALL=C wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
+fi
+
+# clean temporary file if it was created
+if [[ -f ${TEMPFILE} ]]; then
+	if [[ ${DEBUG} ]]; then
+		echo "Left temporary file: \"${TEMPFILE}\" alone for debugging purposes."
+	else
+		rm "${TEMPFILE}" || echo "Failed to remove temporary file: \"${TEMPFILE}\"." >&2
+	fi
+fi
+
+# get the url
+URL="$(geturl "${OUTPUT}")"
+
+# verify that the pastebin service didn't return a known error url such as toofast.html from rafb
+# uses ${SERVICE} and ${URL}.
+verifyurl
+
+# handle the case when there was no location returned
+if [[ -z ${URL} ]]; then
+	if [[ ${DEBUG} || ${VERBOSE} ]]; then
+		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"${OUTPUT}"
+	else
+		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" >&2
+		die "--debug to get the output from wget that can help diagnose it correctly."
+	fi
+fi
+
+# convert_to_raw() may change the value of RAW. Otherwise it set RAWURL.
+if [[ ${RAW} ]] && convert_to_raw; then
+	showurl "${RAWURL}" "raw "
+else
+	showurl "${URL}"
+fi
+
+exit 0
