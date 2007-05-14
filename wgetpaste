@@ -550,9 +550,9 @@ RECIPIENT="$(getrecipient RAW)"
 # paste it
 WGET_ARGS="--tries=5 --timeout=60 ${WGET_ARGS}"
 if geturl needstdout || [[ ${DEBUG} || ! -w /dev/null ]]; then
-	OUTPUT="$(LC_MESSAGES=C wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
+	OUTPUT="$(LC_ALL=C wget -O - ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 else
-	OUTPUT="$(LC_MESSAGES=C wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
+	OUTPUT="$(LC_ALL=C wget -O /dev/null ${WGET_ARGS} ${RECIPIENT} 2>&1)"
 fi
 
 # clean temporary file if it was created
