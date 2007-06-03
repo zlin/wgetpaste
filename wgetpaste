@@ -134,7 +134,7 @@ EOF
 show() {
 	echo "${1:0:1}${2:1}s supported by $(getrecipient) (case sensitive):"
 	local nr extra
-	eval "nr=\"\${#{ENGINE}_${1}[@]}\""
+	eval "nr=\"\${#${ENGINE}_${1}[@]}\""
 	[[ EXPIRATIONS == $1 ]] && eval "extra=\"\${${SERVICE}[3]}\""
 	[[ 0 = $nr ]] && echo -e "\n${extra}\"${SERVICE}\" has no support for setting ${2% *}." >&2
 	for ((i=0; i<${nr}; i++)); do
