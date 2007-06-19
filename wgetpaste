@@ -16,7 +16,7 @@ die() {
 
 # escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
 escape() {
-	echo "$*" | sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g'
+	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
 }	
 
 showurl() {
@@ -249,10 +249,10 @@ geturl() {
 	eval "regex=\"\${${ENGINE}_REGEX[1]}\""
 	if [[ -n $regex ]]; then
 		[[ needstdout == $1 ]] && return 0
-		echo "$*" | sed -n "$regex"
+		sed -n "$regex" <<< "$*"
 	else
 		[[ needstdout == $1 ]] && return 1
-		echo "$*" | sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p'
+		sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p' <<< "$*"
 	fi
 }
 
@@ -272,7 +272,7 @@ convert_to_raw() {
 	local convert
 	eval "convert=\"\${${ENGINE}_REGEX[0]}\""
 	if [[ -n $convert ]]; then
-		RAWURL=$(echo "${URL}" | sed -e "$convert")
+		RAWURL=$(sed -e "$convert" <<< "${URL}")
 		return 0
 	fi
 	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
@@ -302,7 +302,7 @@ while [[ -n $1 ]]; do
 		ARGS[${#ARGS[*]}]="$1"
 		;;
 		-* )
-		for shortarg in $(echo "${1#-}" | sed 's|.| -&|g'); do
+		for shortarg in $(sed 's|.| -&|g' <<< "${1#-}"); do
 			ARGS[${#ARGS[*]}]="$shortarg"
 		done
 		;;
@@ -535,8 +535,8 @@ DESCRIPTION=$(escape "$DESCRIPTION")
 INPUT=$(escape "$INPUT")
 
 # print a friendly warning if the size makes failure predictable for the specified pastebin service.
-SIZE=$(echo "$INPUT" | wc -c)
-LINES=$(echo "$INPUT" | wc -l)
+SIZE=$(wc -c <<< "$INPUT")
+LINES=$(wc -l <<< "$INPUT")
 warnsize >&2
 
 # create temp file (wget is much more reliable reading large input from a file than from the cli directly
