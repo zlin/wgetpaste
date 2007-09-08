@@ -21,26 +21,12 @@ escape() {
 
 showurl() {
 	[[ function == $(type -t add_to_clipboard) ]] && add_to_clipboard "$1"
-	echo "Your ${2}paste can be seen here: ${1}"
+	echo "Your ${2}paste can be seen here: $1"
 }
 
 # Used for --info and --info-only
 INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
-
-### SERVICES ### _s = a specific service ###
-#ENGINE_s
-#URL_s
-#EXPIRATION_INFO_s
-#DEFAULT_NICK_s DEFAULT_LANGUAGE_s DEFAULT_EXPIRATION_s
-#SIZE_s LINES_s
-#TOOFAST_s TOOBIG_s
-### ENGINES ### _s = a specific engine ###
-#LANGUAGES_e LANGUAGE_COUNT_e LANGUAGE_VALUES_e
-#EXPIRATIONS_e EXPIRATION_COUNT_e EXPIRATION_VALUES_e
-#POST_e
-#REGEX_URL_e
-#REGEX_RAW_e
 
 ### services
 SERVICES="ca rafb osl sh"
@@ -98,8 +84,6 @@ POST_sh="_ poster _ _ _ _ code"
 
 ### defaults
 
-# The following defaults can be overridden in either /etc/wgetpaste or ~/.wgetpaste.
-#
 # If add_to_clipboard() is defined as a function in one of those files it will be called with
 # the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
 # whatever your window manager provides for adding it to your clipboard.
@@ -152,7 +136,7 @@ EOF
 
 ### show functions
 
-show_services() {
+showservices() {
 	echo "Services supported: (case sensitive):"
 	local max s IND INDV engine url
 	max=0
@@ -163,36 +147,36 @@ show_services() {
 	if [[ $VERBOSE ]]; then
 		max=0
 		for s in $SERVICES; do
-			s="URL_$s"
+			s=URL_$s
 			s=${!s% *}
 			[[ ${#s} -gt $max ]] && max=${#s}
 		done
 		((INDV=3+max+IND))
 	fi
 	for s in $SERVICES; do
-		[[ $VERBOSE ]] && engine="ENGINE_$s" && engine=$'\e'"[${INDV}G- ${!engine}"
-		url="URL_$s"
+		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="\e[${INDV}G- ${!engine}"
+		url=URL_$s
 		url=${!url% *}
-		echo "    $s "$'\e'"[${IND}G- ${url}${engine}"
+		echo -e "    $s \e[${IND}G- $url$engine"
 	done | sort
 }
 
-show_languages() {
+showlanguages() {
 	echo "Languages supported by $(getrecipient) (case sensitive):"
 	local l lang
-	lang="LANGUAGES_$ENGINE"
-	[[ -z ${!lang} ]] && echo $'\n'"\"$ENGINE\" has no support for setting language" >&2
+	lang=LANGUAGES_$ENGINE
+	[[ -z ${!lang} ]] && echo -e "\n\"$ENGINE\" has no support for setting language" >&2
 	for l in ${!lang}; do
 		echo "    ${l//_/ }"
 	done | sort
 }
 
-show_expirations() {
+showexpirations() {
 	echo "Expirations supported by $(getrecipient) (case sensitive):"
 	local e expiration info
-	expiration="EXPIRATIONS_$ENGINE"
-	info="EXPIRATION_INFO_$SERVICE"
-	[[ -z ${!expiration} ]] && echo $'\n'"${!info}\"$ENGINE\" has no support for setting expiration" >&2
+	expiration=EXPIRATIONS_$ENGINE
+	info=EXPIRATION_INFO_$SERVICE
+	[[ -z ${!expiration} ]] && echo -e "\n${!info}\"$ENGINE\" has no support for setting expiration" >&2
 	for e in ${!expiration}; do
 		echo "    ${e//_/ }"
 	done
@@ -200,20 +184,20 @@ show_expirations() {
 
 ### verify functions
 
-verify_service() {
+verifyservice() {
 	for s in $SERVICES; do
 		[[ $s == $* ]] && return 0
 	done
 	echo "\"$*\" is not a supported service."$'\n' >&2
-	show_services >&2
+	showservices >&2
 	exit 1
 }
 
-verify_language() {
+verifylanguage() {
 	local i j l lang count v values
-	lang="LANGUAGES_$ENGINE"
-	count="LANGUAGE_COUNT_$ENGINE"
-	values="LANGUAGE_VALUES_$ENGINE"
+	lang=LANGUAGES_$ENGINE
+	count=LANGUAGE_COUNT_$ENGINE
+	values=LANGUAGE_VALUES_$ENGINE
 	if [[ -n ${!lang} ]]; then
 		((i=0))
 		for l in ${!lang}; do
@@ -234,16 +218,16 @@ verify_language() {
 	else
 		[[ $LANGUAGE_SET = 0 ]] || return 0
 	fi
-	echo "\"$LANGUAGE\" is not a supported language for $(getrecipient)."$'\n' >&2
-	show_languages >&2
+	echo -e "\"$LANGUAGE\" is not a supported language for $(getrecipient).\n" >&2
+	showlanguages >&2
 	exit 1
 }
 
-verify_expiration() {
+verifyexpiration() {
 	local i j e expiration count v values
-	expiration="EXPIRATIONS_$ENGINE"
-	count="EXPIRATION_COUNT_$ENGINE"
-	values="EXPIRATION_VALUES_$ENGINE"
+	expiration=EXPIRATIONS_$ENGINE
+	count=EXPIRATION_COUNT_$ENGINE
+	values=EXPIRATION_VALUES_$ENGINE
 	if [[ -n ${!expiration} ]]; then
 		((i=0))
 		for e in ${!expiration}; do
@@ -264,8 +248,8 @@ verify_expiration() {
 	else
 		[[ $EXPIRATION_SET = 0 ]] || return 0
 	fi
-	echo "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient)."$'\n' >&2
-	show_expirations >&2
+	echo -e "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient).\n" >&2
+	showexpirations >&2
 	exit 1
 }
 
@@ -276,7 +260,7 @@ getrecipient() {
 	local urls target serv
 	for s in $SERVICES; do
 		if [[ $s == $SERVICE ]]; then
-			urls="URL_$SERVICE"
+			urls=URL_$SERVICE
 			if [[ RAW == $1 ]]; then
 				[[ ${!urls} = ${!urls#* } ]] || target=${!urls#* }
 			else
@@ -300,41 +284,41 @@ warnings() {
 		fi
 	}
 	local size lines
-	size="SIZE_${SERVICE}"
-	lines="LINES_${SERVICE}"
+	size=SIZE_$SERVICE
+	lines=LINES_$SERVICE
 	warn "$SIZE" "${!size% *}" "${!size#* }"
 	warn "$LINES" "${!lines}" "${!lines} lines"
 }
 
 postdata() {
 	local post nr extra nick desc lang exp tabs text
-	post="POST_$ENGINE"
-	nr="${!post//[^ ]}"
+	post=POST_$ENGINE
+	nr=${!post//[^ ]}
 	[[ 6 = ${#nr} ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
-	extra="${!post%% *}"
+	extra=${!post%% *}
 	[[ -n $extra ]] && echo -n "$extra&"
-	post="${!post#* }"
-	nick="${post%% *}"
+	post=${!post#* }
+	nick=${post%% *}
 	[[ _ = $nick ]] || echo -n "$nick=$NICK&"
-	post="${post#* }"
-	desc="${post%% *}"
+	post=${post#* }
+	desc=${post%% *}
 	[[ _ = $desc ]] || echo -n "$desc=$DESCRIPTION&"
-	post="${post#* }"
-	lang="${post%% *}"
+	post=${post#* }
+	lang=${post%% *}
 	[[ _ = $lang ]] || echo -n "$lang=$LANGUAGE&"
-	post="${post#* }"
-	exp="${post%% *}"
+	post=${post#* }
+	exp=${post%% *}
 	[[ _ = $exp ]] || echo -n "$exp=$EXPIRATION&"
-	post="${post#* }"
-	tabs="${post%% *}"
+	post=${post#* }
+	tabs=${post%% *}
 	[[ _ = $tabs ]] || echo -n "$tabs=$CVT_TABS&"
-	text="${post#* }"
+	text=${post#* }
 	echo "$text=$INPUT"
 }
 
 geturl() {
 	local regex
-	regex="REGEX_URL_$ENGINE"
+	regex=REGEX_URL_$ENGINE
 	if [[ -n ${!regex} ]]; then
 		[[ needstdout = $1 ]] && return 0
 		sed -n "${!regex}" <<< "$*"
@@ -356,9 +340,9 @@ verifyurl() {
 }
 
 # if possible convert URL to raw
-convert_to_raw() {
+converttoraw() {
 	local regex
-	regex="REGEX_RAW_$ENGINE"
+	regex=REGEX_RAW_$ENGINE
 	if [[ -n ${!regex} ]]; then
 		RAWURL=$(sed -e "$regex" <<< "$URL")
 		return 0
@@ -438,7 +422,7 @@ while [[ -n $1 ]]; do
 		shift 2
 		;;
 		-E | --list-expiration )
-		LIST_EXPIRATION=0
+		LISTEXPIRATION=0
 		shift
 		;;
 		-h | --help )
@@ -449,7 +433,7 @@ while [[ -n $1 ]]; do
 		shift
 		;;
 		-I | --info-only )
-		SOURCE="info"
+		SOURCE=info
 		shift
 		;;
 		-l | --language )
@@ -459,7 +443,7 @@ while [[ -n $1 ]]; do
 		shift 2
 		;;
 		-L | --list-languages )
-		LIST_LANGUAGES=0
+		LISTLANGUAGES=0
 		shift
 		;;
 		-n | --nick )
@@ -473,12 +457,12 @@ while [[ -n $1 ]]; do
 		;;
 		-s | --service )
 		[[ -z $2 ]] && noargument "$1"
-		verify_service "$2"
+		verifyservice "$2"
 		SERVICE=$(escape "$2")
 		shift 2
 		;;
 		-S | --list-services )
-		SHOW_SERVICES=0
+		SHOWSERVICES=0
 		shift
 		;;
 		-v | --verbose )
@@ -489,7 +473,7 @@ while [[ -n $1 ]]; do
 		echo "$0, version $VERSION" && exit 0
 		;;
 		-x | --xcut )
-		SOURCE="xcut"
+		SOURCE=xcut
 		shift
 		;;
 		-* )
@@ -504,7 +488,7 @@ done
 ### everything below this should be independent of which service is being used...
 
 # show services if requested (need to respect --verbose if specified)
-[[ $SHOW_SERVICES ]] && show_services && exit 0
+[[ $SHOWSERVICES ]] && showservices && exit 0
 
 # set default service, nick, source and tabs convertion
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
@@ -513,33 +497,33 @@ ENGINE="${!ENGINE}"
 default="DEFAULT_NICK_$SERVICE" && [[ -n ${!default} ]] && NICK=${NICK:-${!default}}
 NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
-CVT_TABS="No"
+CVT_TABS=No
 
 # show languages if requested (needs to be done after the right service is selected)
-[[ $LIST_LANGUAGES ]] && show_languages && exit 0
+[[ $LISTLANGUAGES ]] && showlanguages && exit 0
 
 # show expiration options if requested (needs to be done after the right service is selected)
-[[ $LIST_EXPIRATION ]] && show_expirations && exit 0
+[[ $LISTEXPIRATION ]] && showexpirations && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
 default="DEFAULT_LANGUAGE_$SERVICE" && [[ -n ${!default} ]] && LANGUAGE=${LANGUAGE:-${!default}}
 LANGUAGE=${LANGUAGE:-${DEFAULT_LANGUAGE}}
 # uses $SERVICE and $LANGUAGE. may change the value of the latter.
-verify_language
+verifylanguage
 LANGUAGE=$(escape "$LANGUAGE")
 
 # expiration needs to be verified before it is escaped but after service is selected
 default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && EXPIRATION=${EXPIRATION:-${!default}}
 EXPIRATION=${EXPIRATION:-${DEFAULT_EXPIRATION}}
 # uses $SERVICE and $EXPIRATION. may change the value of the latter.
-verify_expiration
+verifyexpiration
 EXPIRATION=$(escape "$EXPIRATION")
 
 # set prompt
 if [[ 0 -eq $UID ]]; then
 	PS1="#"
 else
-	PS1="$"
+	PS1=$
 fi
 
 # set default description
@@ -633,22 +617,22 @@ TEMPFILE=$(mktemp /tmp/wgetpaste.XXXXXX)
 if [[ -f $TEMPFILE ]]; then
     # write paste data to the temporary file
     postdata > "$TEMPFILE" || die "Failed to write to temporary file: \"$TEMPFILE\"."
-    WGET_ARGS="--post-file=$TEMPFILE"
+    WGETARGS="--post-file=$TEMPFILE"
 else
 	# fall back to using --post-data if the temporary file could not be created
 	# TABs and new lines need to be escaped for wget to interpret it as one string
-    WGET_ARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
+    WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 fi
 
 # set recipient
 RECIPIENT=$(getrecipient RAW)
 
 # paste it
-WGET_ARGS="--tries=5 --timeout=60 $WGET_ARGS"
+WGETARGS="--tries=5 --timeout=60 $WGETARGS"
 if geturl needstdout || [[ $DEBUG || ! -w /dev/null ]]; then
-	OUTPUT=$(LC_ALL=C wget -O - $WGET_ARGS $RECIPIENT 2>&1)
+	OUTPUT=$(LC_ALL=C wget -O - $WGETARGS $RECIPIENT 2>&1)
 else
-	OUTPUT=$(LC_ALL=C wget -O /dev/null $WGET_ARGS $RECIPIENT 2>&1)
+	OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS $RECIPIENT 2>&1)
 fi
 
 # clean temporary file if it was created
@@ -677,8 +661,8 @@ if [[ -z $URL ]]; then
 	fi
 fi
 
-# convert_to_raw() may change the value of RAW. Otherwise it set RAWURL.
-if [[ $RAW ]] && convert_to_raw; then
+# converttoraw() may change the value of RAW. Otherwise it set RAWURL.
+if [[ $RAW ]] && converttoraw; then
 	showurl "$RAWURL" "raw "
 else
 	showurl "$URL"
