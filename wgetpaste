@@ -19,9 +19,37 @@ escape() {
 	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
 }	
 
+get_from_clipboard() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -o
+	else
+		cat <<EOF >&2
+Could not find xclip on your system. In order to use --xcut you must
+either emerge x11-misc/xclip or define get_from_clipboard() globally in
+/etc/wgetpaste or per user in ~/.wgetpaste to use another program
+(such as xcut or klipper) to read from your clipboard.
+EOF
+		exit 1		
+	fi
+}
+
+add_to_clipboard() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -loops 10 <<< "$*"
+	else
+		cat <<EOF >&2
+Could not find xclip on your system. In order to use --xpaste you must
+either emerge x11-misc/xclip or define add_to_clipboard() globally in
+/etc/wgetpaste or per user in ~/.wgetpaste to use another program
+(such as xcut or klipper) to write to your clipboard.
+EOF
+		exit 1
+	fi
+}
+
 showurl() {
-	[[ function == $(type -t add_to_clipboard) ]] && add_to_clipboard "$1"
 	echo "Your ${2}paste can be seen here: $1"
+	[[ $XPASTE ]] && add_to_clipboard "$1"
 }
 
 # Used for --info and --info-only
@@ -83,13 +111,6 @@ REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
 POST_sh="% poster % % % % code"
 
 ### defaults
-
-# If add_to_clipboard() is defined as a function in one of those files it will be called with
-# the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
-# whatever your window manager provides for adding it to your clipboard.
-#
-# Likewise if get_from_clipboard() is defined as a function in one of those files it will be
-# called to retrieve input from your clipboard when --xcut is used.
 for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
 	[[ -f $f ]] && . "$f"
 done
@@ -97,8 +118,6 @@ DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
-# setting e.g. DEFAULT_EXPIRATION_${SERVICE} can be used to override the default setting for
-# just one service
 
 ### usage
 
@@ -120,7 +139,8 @@ Options:
     -c, --command COMMAND         paste COMMAND and the output of COMMAND
     -i, --info                    append the output of \`$INFO_COMMAND\`
     -I, --info-only               paste the output of \`$INFO_COMMAND\` only
-    -x, --xcut                    read input from clipboard (requires configuration)
+    -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
+    -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -v, --verbose                 show wget stderr output if no url is received
@@ -130,7 +150,8 @@ Options:
         --version                 show version information
 
 Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
-globally in /etc/wgetpaste{.d/*.bash,} or per user in ~/.wgetpaste{.d/*.bash,}.
+globally in /etc/wgetpaste or /etc/wgetpaste.d/*.bash or per user in any of ~/.wgetpaste
+or ~/.wgetpaste.d/*.bash.
 EOF
 }
 
@@ -275,7 +296,6 @@ getrecipient() {
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
 # service in that regard. note that this is only a warning printed. it does not abort.
-###############################################################################
 warnings() {
 	warn() {
 		if [[ -n $2 && $1 -gt $2 ]]; then
@@ -476,6 +496,10 @@ while [[ -n $1 ]]; do
 		SOURCE=xcut
 		shift
 		;;
+		-X | --xpaste )
+		XPASTE=0
+		shift
+		;;
 		-* )
 		die "$0: unrecognized option \`$1'"
 		;;
@@ -558,29 +582,7 @@ case "$SOURCE" in
 	INPUT="$PS1 $INFO_COMMAND"$'\n'"$($INFO_COMMAND $INFO_ARGS)"
 	;;
 	xcut )
-	if [[ function == $(type -t get_from_clipboard) ]]; then
-		INPUT="$(get_from_clipboard)"
-	else
-		cat <<EOF
-You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use
---xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:
-
-get_from_clipboard() {
-	xclip -o
-}
-
-Likewise if you want the resulting url stored in your clipboard using e.g. xclip
-define it like this:
-
-add_to_clipboard() {
-	xclip <<< "\$*"
-}
-
-You may use whatever your window manager provides to alter your clipboard instead
-of xclip.
-EOF
-		exit 1
-	fi
+	INPUT="$(get_from_clipboard)"
 	;;
 	files | stdin )
 	# handle the case where the input source (defaulting to /dev/stdin) is not readable verbosely
