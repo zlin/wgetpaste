@@ -4,7 +4,7 @@
 # Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed as-is. With no warranties.
 
-VERSION="9999"
+VERSION="2.5"
 
 ### helper functions
 
@@ -19,9 +19,37 @@ escape() {
 	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
 }	
 
+get_from_clipboard() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -o
+	else
+		cat <<EOF >&2
+Could not find xclip on your system. In order to use --xcut you must
+either emerge x11-misc/xclip or define get_from_clipboard() globally in
+/etc/wgetpaste or per user in ~/.wgetpaste to use another program
+(such as xcut or klipper) to read from your clipboard.
+EOF
+		exit 1		
+	fi
+}
+
+add_to_clipboard() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -loops 10 <<< "$*"
+	else
+		cat <<EOF >&2
+Could not find xclip on your system. In order to use --xpaste you must
+either emerge x11-misc/xclip or define add_to_clipboard() globally in
+/etc/wgetpaste or per user in ~/.wgetpaste to use another program
+(such as xcut or klipper) to write to your clipboard.
+EOF
+		exit 1
+	fi
+}
+
 showurl() {
-	[[ function == $(type -t add_to_clipboard) ]] && add_to_clipboard "$1"
 	echo "Your ${2}paste can be seen here: $1"
+	[[ $XPASTE ]] && add_to_clipboard "$1"
 }
 
 # Used for --info and --info-only
@@ -33,11 +61,11 @@ SERVICES="ca rafb osl sh"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
-SIZE_ca="1024000 1_MB"
+SIZE_ca="1024000 1%MB"
 # rafb
 ENGINE_rafb=rafb
 URL_rafb="http://rafb.net/paste/ paste.php"
-SIZE_rafb="800000 800_kB"
+SIZE_rafb="800000 800%kB"
 LINES_rafb=10000
 TOOFAST_rafb="http://rafb.net/p/toofast.html You must wait at least 10 seconds between each paste! Try again in 10 seconds."
 TOOBIG_rafb="http://rafb.net/p/toobig.html The paste is too big. Try another service or paste smaller chunks of data."
@@ -51,45 +79,38 @@ URL_sh="http://sh.nu/p/"
 
 ### engines
 # ca
-LANGUAGES_ca="Plain_Text Asterisk_Configuration C C++ PHP Perl Java VB C# Ruby Python Pascal \
-mIRC PL/I XML SQL Scheme ActionScript Ada Apache_Configuration Assembly_(NASM) ASP Bash CSS \
-Delphi HTML_4.0_Strict JavaScript LISP Lua Microprocessor_ASM Objective_C VB.NET"
+LANGUAGES_ca="Plain%Text Asterisk%Configuration C C++ PHP Perl Java VB C# Ruby Python Pascal \
+mIRC PL/I XML SQL Scheme ActionScript Ada Apache%Configuration Assembly%(NASM) ASP Bash CSS \
+Delphi HTML%4.0%Strict JavaScript LISP Lua Microprocessor%ASM Objective%C VB.NET"
 LANGUAGE_COUNT_ca=0
-EXPIRATIONS_ca="Never 5_minutes 10_minutes 15_minutes 30_minutes 45_minutes 1_hour 2_hours \
-4_hours 8_hours 12_hours 1_day 2_days 3_days 1_week 2_weeks 3_weeks 1_month 2_months \
-3_months 4_months 5_months 6_months 1_year"
-POST_ca="s=Submit+Post name description type expiry _ content"
+EXPIRATIONS_ca="Never 5%minutes 10%minutes 15%minutes 30%minutes 45%minutes 1%hour 2%hours \
+4%hours 8%hours 12%hours 1%day 2%days 3%days 1%week 2%weeks 3%weeks 1%month 2%months \
+3%months 4%months 5%months 6%months 1%year"
+POST_ca="s=Submit+Post name description type expiry % content"
 REGEX_URL_ca='s|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p'
 REGEX_RAW_ca='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|'
 # rafb
-LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain_Text"
-POST_rafb="_ nick desc lang _ cvt_tabs text"
+LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain%Text"
+POST_rafb="% nick desc lang % cvt_tabs text"
 REGEX_RAW_rafb='s|html\?$|txt|'
 # osl
-LANGUAGES_osl="Plain_Text ActionScript Ada Apache_Log_File AppleScript Assembly_(NASM) \
-ASP Bash C C_for_Macs CAD_DCL CAD_Lisp C++ C# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game_Maker HTML_4.0_Strict INI_file Java Javascript Lisp Lua MatLab Microprocessor_ASM \
-MySQL NullSoft_Installer Objective_C OCaml Openoffice.org_BASIC Oracle_8 Pascal Perl PHP Python \
+LANGUAGES_osl="Plain%Text ActionScript Ada Apache%Log%File AppleScript Assembly%(NASM) \
+ASP Bash C C%for%Macs CAD%DCL CAD%Lisp C++ C# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
+FreeBasic Game%Maker HTML%4.0%Strict INI%file Java Javascript Lisp Lua MatLab Microprocessor%ASM \
+MySQL NullSoft%Installer Objective%C OCaml Openoffice.org%BASIC Oracle%8 Pascal Perl PHP Python \
 QBasic Robots.txt Ruby Scheme Smarty SQL TCL VB VB.NET VisualFoxPro XML"
 LANGUAGE_VALUES_osl="text actionscript ada apache applescript asm asp bash c c_mac caddcl \
 cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
 javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
 qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml"
-EXPIRATIONS_osl="Never 1_day 1_month"
+EXPIRATIONS_osl="Never 1%day 1%month"
 EXPIRATION_VALUES_osl="f d m"
-POST_osl="paste=Send poster _ format expiry _ code2"
+POST_osl="paste=Send poster % format expiry % code2"
 REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
 # sh
-POST_sh="_ poster _ _ _ _ code"
+POST_sh="% poster % % % % code"
 
 ### defaults
-
-# If add_to_clipboard() is defined as a function in one of those files it will be called with
-# the url where your paste can be seen as an argument. You may use xclip, xcut, klipper or
-# whatever your window manager provides for adding it to your clipboard.
-#
-# Likewise if get_from_clipboard() is defined as a function in one of those files it will be
-# called to retrieve input from your clipboard when --xcut is used.
 for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
 	[[ -f $f ]] && . "$f"
 done
@@ -97,8 +118,6 @@ DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
-# setting e.g. DEFAULT_EXPIRATION_${SERVICE} can be used to override the default setting for
-# just one service
 
 ### usage
 
@@ -120,7 +139,8 @@ Options:
     -c, --command COMMAND         paste COMMAND and the output of COMMAND
     -i, --info                    append the output of \`$INFO_COMMAND\`
     -I, --info-only               paste the output of \`$INFO_COMMAND\` only
-    -x, --xcut                    read input from clipboard (requires configuration)
+    -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
+    -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -v, --verbose                 show wget stderr output if no url is received
@@ -130,7 +150,8 @@ Options:
         --version                 show version information
 
 Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
-globally in /etc/wgetpaste{.d/*.bash,} or per user in ~/.wgetpaste{.d/*.bash,}.
+globally in /etc/wgetpaste or /etc/wgetpaste.d/*.bash or per user in any of ~/.wgetpaste
+or ~/.wgetpaste.d/*.bash.
 EOF
 }
 
@@ -154,10 +175,10 @@ showservices() {
 		((INDV=3+max+IND))
 	fi
 	for s in $SERVICES; do
-		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="\e[${INDV}G- ${!engine}"
+		[[ $VERBOSE ]] && engine=ENGINE_$s && engine=$'\e'"[${INDV}G- ${!engine}"
 		url=URL_$s
 		url=${!url% *}
-		echo -e "    $s \e[${IND}G- $url$engine"
+		echo "    $s "$'\e'"[${IND}G- $url$engine"
 	done | sort
 }
 
@@ -165,20 +186,20 @@ showlanguages() {
 	echo "Languages supported by $(getrecipient) (case sensitive):"
 	local l lang
 	lang=LANGUAGES_$ENGINE
-	[[ -z ${!lang} ]] && echo -e "\n\"$ENGINE\" has no support for setting language" >&2
+	[[ -z ${!lang} ]] && echo $'\n'"\"$ENGINE\" has no support for setting language." >&2
 	for l in ${!lang}; do
-		echo "    ${l//_/ }"
+		echo "    ${l//%/ }"
 	done | sort
 }
 
 showexpirations() {
-	echo "Expirations supported by $(getrecipient) (case sensitive):"
+	echo "Expiration options supported by $(getrecipient) (case sensitive):"
 	local e expiration info
 	expiration=EXPIRATIONS_$ENGINE
 	info=EXPIRATION_INFO_$SERVICE
-	[[ -z ${!expiration} ]] && echo -e "\n${!info}\"$ENGINE\" has no support for setting expiration" >&2
+	[[ -z ${!expiration} ]] && echo $'\n'"${!info}\"$ENGINE\" has no support for setting expiration." >&2
 	for e in ${!expiration}; do
-		echo "    ${e//_/ }"
+		echo "    ${e//%/ }"
 	done
 }
 
@@ -201,13 +222,13 @@ verifylanguage() {
 	if [[ -n ${!lang} ]]; then
 		((i=0))
 		for l in ${!lang}; do
-			if [[ $LANGUAGE == ${l//_/ } ]]; then
+			if [[ $LANGUAGE == ${l//%/ } ]]; then
 				if [[ -n ${!count} ]]; then
 					((LANGUAGE=i+1))
 				elif [[ -n ${!values} ]]; then
 					((j=0))
 					for v in ${!values}; do
-						[[ i -eq j ]] && LANGUAGE=${v//_/ } && break
+						[[ i -eq j ]] && LANGUAGE=${v//%/ } && break
 						((j++))
 					done
 				fi
@@ -216,9 +237,9 @@ verifylanguage() {
 			((i++))
 		done
 	else
-		[[ $LANGUAGE_SET = 0 ]] || return 0
+		[[ $LANGUAGESET = 0 ]] || return 0
 	fi
-	echo -e "\"$LANGUAGE\" is not a supported language for $(getrecipient).\n" >&2
+	echo "\"$LANGUAGE\" is not a supported language for $(getrecipient)."$'\n' >&2
 	showlanguages >&2
 	exit 1
 }
@@ -231,13 +252,13 @@ verifyexpiration() {
 	if [[ -n ${!expiration} ]]; then
 		((i=0))
 		for e in ${!expiration}; do
-			if [[ ${EXPIRATION} == ${e//_/ } ]]; then
+			if [[ ${EXPIRATION} == ${e//%/ } ]]; then
 				if [[ -n ${!count} ]]; then
 					((EXPIRATION=i+1))
 				elif [[ -n {!values} ]]; then
 					((j=0))
 					for v in ${!values}; do
-						[[ i -eq j ]] && EXPIRATION=${e//_/ } && break
+						[[ i -eq j ]] && EXPIRATION=${e//%/ } && break
 						((j++))
 					done
 				fi
@@ -246,9 +267,9 @@ verifyexpiration() {
 			((i++))
 		done
 	else
-		[[ $EXPIRATION_SET = 0 ]] || return 0
+		[[ $EXPIRATIONSET = 0 ]] || return 0
 	fi
-	echo -e "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient).\n" >&2
+	echo "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient)."$'\n' >&2
 	showexpirations >&2
 	exit 1
 }
@@ -275,7 +296,6 @@ getrecipient() {
 
 # print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
 # service in that regard. note that this is only a warning printed. it does not abort.
-###############################################################################
 warnings() {
 	warn() {
 		if [[ -n $2 && $1 -gt $2 ]]; then
@@ -299,19 +319,19 @@ postdata() {
 	[[ -n $extra ]] && echo -n "$extra&"
 	post=${!post#* }
 	nick=${post%% *}
-	[[ _ = $nick ]] || echo -n "$nick=$NICK&"
+	[[ % = $nick ]] || echo -n "$nick=$NICK&"
 	post=${post#* }
 	desc=${post%% *}
-	[[ _ = $desc ]] || echo -n "$desc=$DESCRIPTION&"
+	[[ % = $desc ]] || echo -n "$desc=$DESCRIPTION&"
 	post=${post#* }
 	lang=${post%% *}
-	[[ _ = $lang ]] || echo -n "$lang=$LANGUAGE&"
+	[[ % = $lang ]] || echo -n "$lang=$LANGUAGE&"
 	post=${post#* }
 	exp=${post%% *}
-	[[ _ = $exp ]] || echo -n "$exp=$EXPIRATION&"
+	[[ % = $exp ]] || echo -n "$exp=$EXPIRATION&"
 	post=${post#* }
 	tabs=${post%% *}
-	[[ _ = $tabs ]] || echo -n "$tabs=$CVT_TABS&"
+	[[ % = $tabs ]] || echo -n "$tabs=$CVT_TABS&"
 	text=${post#* }
 	echo "$text=$INPUT"
 }
@@ -417,7 +437,7 @@ while [[ -n $1 ]]; do
 		;;
 		-e | --expiration )
 		[[ -z $2 ]] && noargument "$1"
-		EXPIRATION_SET=0
+		EXPIRATIONSET=0
 		EXPIRATION="$2"
 		shift 2
 		;;
@@ -438,7 +458,7 @@ while [[ -n $1 ]]; do
 		;;
 		-l | --language )
 		[[ -z $2 ]] && noargument "$1"
-		LANGUAGE_SET=0
+		LANGUAGESET=0
 		LANGUAGE="$2"
 		shift 2
 		;;
@@ -474,6 +494,10 @@ while [[ -n $1 ]]; do
 		;;
 		-x | --xcut )
 		SOURCE=xcut
+		shift
+		;;
+		-X | --xpaste )
+		XPASTE=0
 		shift
 		;;
 		-* )
@@ -558,29 +582,7 @@ case "$SOURCE" in
 	INPUT="$PS1 $INFO_COMMAND"$'\n'"$($INFO_COMMAND $INFO_ARGS)"
 	;;
 	xcut )
-	if [[ function == $(type -t get_from_clipboard) ]]; then
-		INPUT="$(get_from_clipboard)"
-	else
-		cat <<EOF
-You need to define get_from_clipboard() in /etc/wgetpaste or ~/.wgetpaste to use
---xcut. If you want to use e.g. xclip simply emerge xclip and define it like this:
-
-get_from_clipboard() {
-	xclip -o
-}
-
-Likewise if you want the resulting url stored in your clipboard using e.g. xclip
-define it like this:
-
-add_to_clipboard() {
-	xclip <<< "\$*"
-}
-
-You may use whatever your window manager provides to alter your clipboard instead
-of xclip.
-EOF
-		exit 1
-	fi
+	INPUT="$(get_from_clipboard)"
 	;;
 	files | stdin )
 	# handle the case where the input source (defaulting to /dev/stdin) is not readable verbosely
