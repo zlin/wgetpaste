@@ -159,7 +159,7 @@ EOF
 
 showservices() {
 	echo "Services supported: (case sensitive):"
-	local max s IND INDV engine url
+	local max s IND INDV engine url d
 	max=0
 	for s in $SERVICES; do
 		[[ ${#s} -gt $max ]] && max=${#s}
@@ -175,31 +175,34 @@ showservices() {
 		((INDV=3+max+IND))
 	fi
 	for s in $SERVICES; do
+		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
 		[[ $VERBOSE ]] && engine=ENGINE_$s && engine=$'\e'"[${INDV}G- ${!engine}"
 		url=URL_$s
 		url=${!url% *}
-		echo "    $s "$'\e'"[${IND}G- $url$engine"
+		echo "   $d$s "$'\e'"[${IND}G- $url$engine"
 	done | sort
 }
 
 showlanguages() {
 	echo "Languages supported by $(getrecipient) (case sensitive):"
-	local l lang
+	local l lang d
 	lang=LANGUAGES_$ENGINE
 	[[ -z ${!lang} ]] && echo $'\n'"\"$ENGINE\" has no support for setting language." >&2
 	for l in ${!lang}; do
-		echo "    ${l//%/ }"
+		[[ ${l//%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
+		echo "   $d${l//%/ }"
 	done | sort
 }
 
 showexpirations() {
 	echo "Expiration options supported by $(getrecipient) (case sensitive):"
-	local e expiration info
+	local e expiration info d
 	expiration=EXPIRATIONS_$ENGINE
 	info=EXPIRATION_INFO_$SERVICE
 	[[ -z ${!expiration} ]] && echo $'\n'"${!info}\"$ENGINE\" has no support for setting expiration." >&2
 	for e in ${!expiration}; do
-		echo "    ${e//%/ }"
+		[[ ${e//%/ } = $DEFAULT_EXPIRATION ]] && d="*" || d=" "
+		echo "   $d${e//%/ }"
 	done
 }
 
@@ -514,30 +517,28 @@ done
 # show services if requested (need to respect --verbose if specified)
 [[ $SHOWSERVICES ]] && showservices && exit 0
 
-# set default service, nick, source and tabs convertion
+# set defaults
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
 ENGINE=ENGINE_$SERVICE
 ENGINE="${!ENGINE}"
-default="DEFAULT_NICK_$SERVICE" && [[ -n ${!default} ]] && NICK=${NICK:-${!default}}
+default="DEFAULT_NICK_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_NICK=${!default}
+default="DEFAULT_LANGUAGE_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_LANGUAGE=${!default}
+default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_EXPIRATION=${!default}
 NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS=No
 
-# show languages if requested (needs to be done after the right service is selected)
+# show languages or expirations if requested (needs to be done after the right service is selected)
 [[ $LISTLANGUAGES ]] && showlanguages && exit 0
-
-# show expiration options if requested (needs to be done after the right service is selected)
 [[ $LISTEXPIRATION ]] && showexpirations && exit 0
 
 # language needs to be verified before it is escaped but after service is selected
-default="DEFAULT_LANGUAGE_$SERVICE" && [[ -n ${!default} ]] && LANGUAGE=${LANGUAGE:-${!default}}
 LANGUAGE=${LANGUAGE:-${DEFAULT_LANGUAGE}}
 # uses $SERVICE and $LANGUAGE. may change the value of the latter.
 verifylanguage
 LANGUAGE=$(escape "$LANGUAGE")
 
 # expiration needs to be verified before it is escaped but after service is selected
-default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && EXPIRATION=${EXPIRATION:-${!default}}
 EXPIRATION=${EXPIRATION:-${DEFAULT_EXPIRATION}}
 # uses $SERVICE and $EXPIRATION. may change the value of the latter.
 verifyexpiration
