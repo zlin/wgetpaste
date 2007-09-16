@@ -52,6 +52,9 @@ showurl() {
 	[[ $XPASTE ]] && add_to_clipboard "$1"
 }
 
+E=$'\e'
+N=$'\n'
+
 # Used for --info and --info-only
 INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
@@ -69,7 +72,7 @@ SIZE_rafb="800000 800%kB"
 LINES_rafb=10000
 TOOFAST_rafb="http://rafb.net/p/toofast.html You must wait at least 10 seconds between each paste! Try again in 10 seconds."
 TOOBIG_rafb="http://rafb.net/p/toobig.html The paste is too big. Try another service or paste smaller chunks of data."
-EXPIRATION_INFO_rafb="Pastes on rafb: http://rafb.net/paste/ expire after 24 hours."$'\n'
+EXPIRATION_INFO_rafb="Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.$N"
 # osl
 ENGINE_osl=osl
 URL_osl="http://pastebin.osuosl.org/ pastebin.php"
@@ -176,10 +179,10 @@ showservices() {
 	fi
 	for s in $SERVICES; do
 		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
-		[[ $VERBOSE ]] && engine=ENGINE_$s && engine=$'\e'"[${INDV}G- ${!engine}"
+		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="$E[${INDV}G- ${!engine}"
 		url=URL_$s
 		url=${!url% *}
-		echo "   $d$s "$'\e'"[${IND}G- $url$engine"
+		echo "   $d$s $E[${IND}G- $url$engine"
 	done | sort
 }
 
@@ -187,7 +190,7 @@ showlanguages() {
 	echo "Languages supported by $(getrecipient) (case sensitive):"
 	local l lang d
 	lang=LANGUAGES_$ENGINE
-	[[ -z ${!lang} ]] && echo $'\n'"\"$ENGINE\" has no support for setting language." >&2
+	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2
 	for l in ${!lang}; do
 		[[ ${l//%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
 		echo "   $d${l//%/ }"
@@ -199,7 +202,7 @@ showexpirations() {
 	local e expiration info d
 	expiration=EXPIRATIONS_$ENGINE
 	info=EXPIRATION_INFO_$SERVICE
-	[[ -z ${!expiration} ]] && echo $'\n'"${!info}\"$ENGINE\" has no support for setting expiration." >&2
+	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2
 	for e in ${!expiration}; do
 		[[ ${e//%/ } = $DEFAULT_EXPIRATION ]] && d="*" || d=" "
 		echo "   $d${e//%/ }"
@@ -212,7 +215,7 @@ verifyservice() {
 	for s in $SERVICES; do
 		[[ $s == $* ]] && return 0
 	done
-	echo "\"$*\" is not a supported service."$'\n' >&2
+	echo "\"$*\" is not a supported service.$N" >&2
 	showservices >&2
 	exit 1
 }
@@ -242,7 +245,7 @@ verifylanguage() {
 	else
 		[[ $LANGUAGESET = 0 ]] || return 0
 	fi
-	echo "\"$LANGUAGE\" is not a supported language for $(getrecipient)."$'\n' >&2
+	echo "\"$LANGUAGE\" is not a supported language for $(getrecipient).$N" >&2
 	showlanguages >&2
 	exit 1
 }
@@ -272,7 +275,7 @@ verifyexpiration() {
 	else
 		[[ $EXPIRATIONSET = 0 ]] || return 0
 	fi
-	echo "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient)."$'\n' >&2
+	echo "\"$EXPIRATION\" is not a supported expiration option for $(getrecipient).$N" >&2
 	showexpirations >&2
 	exit 1
 }
@@ -532,15 +535,13 @@ CVT_TABS=No
 [[ $LISTLANGUAGES ]] && showlanguages && exit 0
 [[ $LISTEXPIRATION ]] && showexpirations && exit 0
 
-# language needs to be verified before it is escaped but after service is selected
+# language and expiration need to be verified before they are escaped but after service and default
+# values have been selected
 LANGUAGE=${LANGUAGE:-${DEFAULT_LANGUAGE}}
-# uses $SERVICE and $LANGUAGE. may change the value of the latter.
 verifylanguage
 LANGUAGE=$(escape "$LANGUAGE")
 
-# expiration needs to be verified before it is escaped but after service is selected
 EXPIRATION=${EXPIRATION:-${DEFAULT_EXPIRATION}}
-# uses $SERVICE and $EXPIRATION. may change the value of the latter.
 verifyexpiration
 EXPIRATION=$(escape "$EXPIRATION")
 
@@ -576,11 +577,11 @@ fi
 case "$SOURCE" in
 	command )
 	for c in "${COMMANDS[@]}"; do
-		INPUT="${INPUT}${PS1} ${c}"$'\n'"$(bash -c "$c" 2>&1)"$'\n\n'
+		INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1)$N$N"
 	done
 	;;
 	info )
-	INPUT="$PS1 $INFO_COMMAND"$'\n'"$($INFO_COMMAND $INFO_ARGS)"
+	INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS)"
 	;;
 	xcut )
 	INPUT="$(get_from_clipboard)"
@@ -591,10 +592,10 @@ case "$SOURCE" in
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || \
 				die "The input source: \"$f\" is not readable. Please specify a readable input source."
-			INPUT="${INPUT}${PS1} cat $f"$'\n'"$( < "$f" )"$'\n\n'
+			INPUT="$INPUT$PS1 cat $f$N$( < "$f" )$N$N"
 		done
 	else
-		INPUT=$( < "$FILES" )
+		INPUT=$(<"$FILES")
 	fi
 	;;
 esac
@@ -603,7 +604,7 @@ esac
 # append $INFO_COMMAND if needed
 if [[ $INFO ]]; then
 	DESCRIPTION="$DESCRIPTION $PS1 $INFO_COMMAND;"
-	INPUT="$INPUT"$'\n'"$PS1 $INFO_COMMAND"$'\n'"$($INFO_COMMAND $INFO_ARGS)"
+	INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS)"
 fi
 
 # escape DESCRIPTION and INPUT
@@ -657,7 +658,7 @@ verifyurl
 # handle the case when there was no location returned
 if [[ -z $URL ]]; then
 	if [[ $DEBUG || $VERBOSE ]]; then
-		die "Apparently nothing was received. Perhaps the connection failed."$'\n'"$OUTPUT"
+		die "Apparently nothing was received. Perhaps the connection failed.$N$OUTPUT"
 	else
 		echo "Apparently nothing was received. Perhaps the connection failed. Enable --verbose or" >&2
 		die "--debug to get the output from wget that can help diagnose it correctly."
