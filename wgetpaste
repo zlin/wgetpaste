@@ -8,7 +8,6 @@ VERSION="9999"
 
 ### helper functions
 
-# show error message(s) and die
 die() {
 	echo "$@" >&2
 	exit 1
@@ -18,6 +17,9 @@ die() {
 escape() {
 	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
 }	
+
+
+### default clipboard functions
 
 get_from_clipboard() {
 	if [[ -x $(type -P xclip) ]]; then
@@ -47,11 +49,7 @@ EOF
 	fi
 }
 
-showurl() {
-	echo "Your ${2}paste can be seen here: $1"
-	[[ $XPASTE ]] && add_to_clipboard "$1"
-}
-
+### escape and new line characters
 E=$'\e'
 N=$'\n'
 
@@ -317,29 +315,23 @@ warnings() {
 }
 
 postdata() {
-	local post nr extra nick desc lang exp tabs text
+	local post nr extra f
 	post=POST_$ENGINE
 	nr=${!post//[^ ]}
 	[[ 6 = ${#nr} ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 	extra=${!post%% *}
-	[[ -n $extra ]] && echo -n "$extra&"
-	post=${!post#* }
-	nick=${post%% *}
-	[[ % = $nick ]] || echo -n "$nick=$NICK&"
-	post=${post#* }
-	desc=${post%% *}
-	[[ % = $desc ]] || echo -n "$desc=$DESCRIPTION&"
-	post=${post#* }
-	lang=${post%% *}
-	[[ % = $lang ]] || echo -n "$lang=$LANGUAGE&"
-	post=${post#* }
-	exp=${post%% *}
-	[[ % = $exp ]] || echo -n "$exp=$EXPIRATION&"
-	post=${post#* }
-	tabs=${post%% *}
-	[[ % = $tabs ]] || echo -n "$tabs=$CVT_TABS&"
-	text=${post#* }
-	echo "$text=$INPUT"
+	[[ % = $extra ]] || echo -n "$extra&"
+	e() {
+		post="$1"
+		shift
+		while [[ -n $1 ]]; do
+			f=${post%% *}
+			[[ % != $f ]] && echo -n "$f=${!1}" && [[ $# -gt 1 ]] && echo -n "&"
+			shift
+			post=${post#$f }
+		done
+	}
+	e "${!post#$extra }" NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT
 }
 
 geturl() {
@@ -365,6 +357,11 @@ verifyurl() {
 	done
 }
 
+showurl() {
+	echo "Your ${2}paste can be seen here: $1"
+	[[ $XPASTE ]] && add_to_clipboard "$1"
+}
+
 # if possible convert URL to raw
 converttoraw() {
 	local regex
@@ -379,7 +376,7 @@ converttoraw() {
 
 ### read cli options
 
-# convert groups of short options to singular short options. convert long options to short options.
+# separate groups of short options. replace '--foo=bar' by '--foo bar'.
 while [[ -n $1 ]]; do
 	case "$1" in
 		-- )
@@ -410,7 +407,7 @@ while [[ -n $1 ]]; do
 	shift
 done
 
-# set the converted options as input
+# set the separated options as input options.
 set -- "${ARGS[@]}"
 
 noargument() {
@@ -517,10 +514,10 @@ done
 
 ### everything below this should be independent of which service is being used...
 
-# show services if requested (need to respect --verbose if specified)
+# show services if requested (need to honour --verbose)
 [[ $SHOWSERVICES ]] && showservices && exit 0
 
-# set defaults
+# enable defaults
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
 ENGINE=ENGINE_$SERVICE
 ENGINE="${!ENGINE}"
@@ -531,12 +528,12 @@ NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS=No
 
-# show languages or expirations if requested (needs to be done after the right service is selected)
+# show languages or expirations if requested (after the right service and default have been selected)
 [[ $LISTLANGUAGES ]] && showlanguages && exit 0
 [[ $LISTEXPIRATION ]] && showexpirations && exit 0
 
-# language and expiration need to be verified before they are escaped but after service and default
-# values have been selected
+# language and expiration need to be verified before they are escaped but after service and defaults
+# have been selected
 LANGUAGE=${LANGUAGE:-${DEFAULT_LANGUAGE}}
 verifylanguage
 LANGUAGE=$(escape "$LANGUAGE")
@@ -587,39 +584,40 @@ case "$SOURCE" in
 	INPUT="$(get_from_clipboard)"
 	;;
 	files | stdin )
-	# handle the case where the input source (defaulting to /dev/stdin) is not readable verbosely
+	notreadable() {
+		die "The input source: \"$1\" is not readable. Please specify a readable input source."
+	}
 	if [[ ${#FILES[*]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
-			[[ -r $f ]] || \
-				die "The input source: \"$f\" is not readable. Please specify a readable input source."
+			[[ -r $f ]] || notreadable "$f"
 			INPUT="$INPUT$PS1 cat $f$N$( < "$f" )$N$N"
 		done
 	else
+		[[ -r $FILES ]] || notreadable "$FILES"
 		INPUT=$(<"$FILES")
 	fi
 	;;
 esac
 [[ -z $INPUT ]] && die "No input read. Nothing to paste. Aborting."
 
-# append $INFO_COMMAND if needed
+# append info if needed
 if [[ $INFO ]]; then
 	DESCRIPTION="$DESCRIPTION $PS1 $INFO_COMMAND;"
-	INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS)"
+	INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
 fi
 
 # escape DESCRIPTION and INPUT
 DESCRIPTION=$(escape "$DESCRIPTION")
 INPUT=$(escape "$INPUT")
 
-# print a friendly warning if the size makes failure predictable for the specified pastebin service.
+# print friendly warnings if max sizes have been specified for the pastebin service and the size exceeds that
 SIZE=$(wc -c <<< "$INPUT")
 LINES=$(wc -l <<< "$INPUT")
 warnings >&2
 
-# create temp file (wget is much more reliable reading large input from a file than from the cli directly
+# create temp file (wget is much more reliable reading large input via --post-file rather than --post-data)
 TEMPFILE=$(mktemp /tmp/wgetpaste.XXXXXX)
 if [[ -f $TEMPFILE ]]; then
-    # write paste data to the temporary file
     postdata > "$TEMPFILE" || die "Failed to write to temporary file: \"$TEMPFILE\"."
     WGETARGS="--post-file=$TEMPFILE"
 else
@@ -652,7 +650,6 @@ fi
 URL=$(geturl "$OUTPUT")
 
 # verify that the pastebin service did not return a known error url such as toofast.html from rafb
-# uses $SERVICE and $URL.
 verifyurl
 
 # handle the case when there was no location returned
@@ -665,7 +662,7 @@ if [[ -z $URL ]]; then
 	fi
 fi
 
-# converttoraw() may change the value of RAW. Otherwise it set RAWURL.
+# converttoraw() sets RAWURL upon success.
 if [[ $RAW ]] && converttoraw; then
 	showurl "$RAWURL" "raw "
 else
