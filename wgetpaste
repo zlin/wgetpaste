@@ -1,54 +1,12 @@
 #!/bin/bash
 # A Script that automates pasting to a number of pastebin services
-# relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami) and wget
+# relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami/tee) and wget
 # Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed as-is. With no warranties.
 
 VERSION="9999"
 
-### helper functions
-
-die() {
-	echo "$@" >&2
-	exit 1
-}
-
-# escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
-escape() {
-	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
-}	
-
-
-### default clipboard functions
-
-noxclip() {
-	cat <<EOF >&2
-Could not find xclip on your system. In order to use --x$1 you must
-either emerge x11-misc/xclip or define x_$1() globally in /etc/wgetpaste
-or per user in ~/.wgetpaste to use another program (such as e.g. xcut or
-klipper) to $2 your clipboard.
-
-EOF
-	exit 1
-}
-
-x_cut() {
-	if [[ -x $(type -P xclip) ]]; then
-		xclip -o
-	else
-		noxclip cut "read from"
-	fi
-}
-
-x_paste() {
-	if [[ -x $(type -P xclip) ]]; then
-		xclip -loops 10 <<< "$*"
-	else
-		noxclip paste "write to"
-	fi
-}
-
-### escape and new line characters
+# escape and new line characters
 E=$'\e'
 N=$'\n'
 
@@ -110,97 +68,52 @@ REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
 # sh
 POST_sh="% poster % % % % code"
 
-### usage
+### errors
+die() {
+	echo "$@" >&2
+	exit 1
+}
 
-usage() {
-	cat <<EOF
-Usage: $0 [options] [file[s]]
+noargument() {
+	die "$0: option $1 requires an argument"
+}
 
-Options:
-    -l, --language LANG           set language (defaults to "$DEFAULT_LANGUAGE")
-    -d, --description DESCRIPTION set description (defaults to "stdin" or filename)
-    -n, --nick NICK               set nick (defaults to your username))
-    -s, --service SERVICE         set service to use (defaults to "$DEFAULT_SERVICE")
-    -e, --expiration EXPIRATION   set when it should expire (defaults to "$DEFAULT_EXPIRATION")
+notreadable() {
+	die "The input source: \"$1\" is not readable. Please specify a readable input source."
+}
 
-    -S, --list-services           list supported pastebin services
-    -L, --list-languages          list languages supported by the specified service
-    -E, --list-expiration         list expiration setting supported by the specified service
+noxclip() {
+	cat <<EOF >&2
+Could not find xclip on your system. In order to use --x$1 you must
+either emerge x11-misc/xclip or define x_$1() globally in /etc/wgetpaste
+or per user in ~/.wgetpaste to use another program (such as e.g. xcut or
+klipper) to $2 your clipboard.
 
-    -c, --command COMMAND         paste COMMAND and the output of COMMAND
-    -i, --info                    append the output of \`$INFO_COMMAND\`
-    -I, --info-only               paste the output of \`$INFO_COMMAND\` only
-    -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
-    -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
-
-    -r, --raw                     show url for the raw paste (no syntax highlighting or html)
-    -t, --tee                     use tee to show what is being pasted
-    -v, --verbose                 show wget stderr output if no url is received
-        --debug                   be *very* verbose (implies -v)
-
-    -h, --help                    show this help
-    -g, --ignore-configs          ignore /etc/wgetpaste, ~/.wgetpaste etc.
-        --version                 show version information
-
-Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
-globally in /etc/wgetpaste or /etc/wgetpaste.d/*.bash or per user in any of ~/.wgetpaste
-or ~/.wgetpaste.d/*.bash.
 EOF
+	exit 1
 }
 
-### show functions
+### conversions
 
-showservices() {
-	echo "Services supported: (case sensitive):"
-	local max s IND INDV engine url d
-	max=0
-	for s in $SERVICES; do
-		[[ ${#s} -gt $max ]] && max=${#s}
-	done
-	((IND=6+max))
-	if [[ $VERBOSE ]]; then
-		max=0
-		for s in $SERVICES; do
-			s=URL_$s
-			s=${!s% *}
-			[[ ${#s} -gt $max ]] && max=${#s}
-		done
-		((INDV=3+max+IND))
+# escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
+escape() {
+	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
+}	
+
+# if possible convert URL to raw
+converttoraw() {
+	local regex
+	regex=REGEX_RAW_$ENGINE
+	if [[ -n ${!regex} ]]; then
+		RAWURL=$(sed -e "${!regex}" <<< "$URL")
+		set +x
+		return 0
 	fi
-	for s in $SERVICES; do
-		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
-		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="$E[${INDV}G- ${!engine}"
-		url=URL_$s
-		url=${!url% *}
-		echo "   $d$s $E[${IND}G- $url$engine"
-	done | sort
+	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
+	return 1
 }
 
-showlanguages() {
-	echo "Languages supported by $(getrecipient) (case sensitive):"
-	local l lang d
-	lang=LANGUAGES_$ENGINE
-	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2
-	for l in ${!lang}; do
-		[[ ${l//%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
-		echo "   $d${l//%/ }"
-	done | sort
-}
-
-showexpirations() {
-	echo "Expiration options supported by $(getrecipient) (case sensitive):"
-	local e expiration info d
-	expiration=EXPIRATIONS_$ENGINE
-	info=EXPIRATION_INFO_$SERVICE
-	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2
-	for e in ${!expiration}; do
-		[[ ${e//%/ } = $DEFAULT_EXPIRATION ]] && d="*" || d=" "
-		echo "   $d${e//%/ }"
-	done
-}
-
-### verify functions
-
+### verification
 verifyservice() {
 	for s in $SERVICES; do
 		[[ $s == $* ]] && return 0
@@ -270,9 +183,152 @@ verifyexpiration() {
 	exit 1
 }
 
+# verify that the pastebin service did not return a known error url. otherwise print a helpful error message
+verifyurl() {
+	dieifknown() {
+		[[ -n ${!1%% *} && ${!1%% *} == $URL ]] && die "${!1#* }"
+	}
+	local t
+	for t in ${!TOO*}; do
+		[[ $t == TOO*_$SERVICE ]] && dieifknown "$t"
+	done
+}
+
+# print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
+# service in that regard. note that this is only a warning printed. it does not abort.
+warnings() {
+	warn() {
+		if [[ -n $2 && $1 -gt $2 ]]; then
+			echo "Pasting > $3 often tend to fail with $SERVICE. Use --verbose or --debug to see the"
+			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+		fi
+	}
+	local size lines
+	size=SIZE_$SERVICE
+	warn "$SIZE" "${!size% *}" "${!size#* }"
+	lines=LINES_$SERVICE
+	warn "$LINES" "${!lines}" "${!lines} lines"
+}
+
+### input
+getfilenames() {
+	for f in "$@"; do
+		[[ -f $f ]] || die "$0: $f No such file found."
+		SOURCE="files"
+		FILES[${#FILES[*]}]="$f"
+	done
+}
+
+x_cut() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -o
+	else
+		noxclip cut "read from"
+	fi
+}
+
+### output
+usage() {
+	cat <<EOF
+Usage: $0 [options] [file[s]]
+
+Options:
+    -l, --language LANG           set language (defaults to "$DEFAULT_LANGUAGE")
+    -d, --description DESCRIPTION set description (defaults to "stdin" or filename)
+    -n, --nick NICK               set nick (defaults to your username))
+    -s, --service SERVICE         set service to use (defaults to "$DEFAULT_SERVICE")
+    -e, --expiration EXPIRATION   set when it should expire (defaults to "$DEFAULT_EXPIRATION")
+
+    -S, --list-services           list supported pastebin services
+    -L, --list-languages          list languages supported by the specified service
+    -E, --list-expiration         list expiration setting supported by the specified service
+
+    -c, --command COMMAND         paste COMMAND and the output of COMMAND
+    -i, --info                    append the output of \`$INFO_COMMAND\`
+    -I, --info-only               paste the output of \`$INFO_COMMAND\` only
+    -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
+    -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
+
+    -r, --raw                     show url for the raw paste (no syntax highlighting or html)
+    -t, --tee                     use tee to show what is being pasted
+    -v, --verbose                 show wget stderr output if no url is received
+        --debug                   be *very* verbose (implies -v)
+
+    -h, --help                    show this help
+    -g, --ignore-configs          ignore /etc/wgetpaste, ~/.wgetpaste etc.
+        --version                 show version information
+
+Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
+globally in /etc/wgetpaste or /etc/wgetpaste.d/*.bash or per user in any of ~/.wgetpaste
+or ~/.wgetpaste.d/*.bash.
+EOF
+}
+
+showservices() {
+	echo "Services supported: (case sensitive):"
+	local max s IND INDV engine url d
+	max=0
+	for s in $SERVICES; do
+		[[ ${#s} -gt $max ]] && max=${#s}
+	done
+	((IND=6+max))
+	if [[ $VERBOSE ]]; then
+		max=0
+		for s in $SERVICES; do
+			s=URL_$s
+			s=${!s% *}
+			[[ ${#s} -gt $max ]] && max=${#s}
+		done
+		((INDV=3+max+IND))
+	fi
+	for s in $SERVICES; do
+		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
+		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="$E[${INDV}G- ${!engine}"
+		url=URL_$s
+		url=${!url% *}
+		echo "   $d$s $E[${IND}G- $url$engine"
+	done | sort
+}
+
+showlanguages() {
+	echo "Languages supported by $(getrecipient) (case sensitive):"
+	local l lang d
+	lang=LANGUAGES_$ENGINE
+	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2
+	for l in ${!lang}; do
+		[[ ${l//%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
+		echo "   $d${l//%/ }"
+	done | sort
+}
+
+showexpirations() {
+	echo "Expiration options supported by $(getrecipient) (case sensitive):"
+	local e expiration info d
+	expiration=EXPIRATIONS_$ENGINE
+	info=EXPIRATION_INFO_$SERVICE
+	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2
+	for e in ${!expiration}; do
+		[[ ${e//%/ } = $DEFAULT_EXPIRATION ]] && d="*" || d=" "
+		echo "   $d${e//%/ }"
+	done
+}
+
+showurl() {
+	echo "Your ${2}paste can be seen here: $1"
+	[[ $XPASTE ]] && x_paste "$1"
+}
+
+x_paste() {
+	if [[ -x $(type -P xclip) ]]; then
+		xclip -loops 10 <<< "$*"
+	else
+		noxclip paste "write to"
+	fi
+}
+
 ### Posting helper functions
 
-# get the url to post to for any given service
+# get the url to post to
 getrecipient() {
 	local urls target serv
 	for s in $SERVICES; do
@@ -290,22 +346,7 @@ getrecipient() {
 	die "Failed to get url for \"$SERVICE\"."
 }
 
-# print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
-# service in that regard. note that this is only a warning printed. it does not abort.
-warnings() {
-	warn() {
-		if [[ -n $2 && $1 -gt $2 ]]; then
-			echo "Pasting > $3 often tend to fail with $SERVICE. Use --verbose or --debug to see the"
-			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
-		fi
-	}
-	local size lines
-	size=SIZE_$SERVICE
-	lines=LINES_$SERVICE
-	warn "$SIZE" "${!size% *}" "${!size#* }"
-	warn "$LINES" "${!lines}" "${!lines} lines"
-}
-
+# generate POST data
 postdata() {
 	local post nr extra f
 	post=POST_$ENGINE
@@ -326,6 +367,7 @@ postdata() {
 	e "${!post#$extra }" NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT
 }
 
+# get url from response from server
 geturl() {
 	local regex
 	regex=REGEX_URL_$ENGINE
@@ -336,35 +378,6 @@ geturl() {
 		[[ needstdout = $1 ]] && return 1
 		sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p' <<< "$*"
 	fi
-}
-
-# verify that the pastebin service did not return a known error url. otherwise print a helpful error message
-verifyurl() {
-	dieifknown() {
-		[[ -n ${!1%% *} && ${!1%% *} == $URL ]] && die "${!1#* }"
-	}
-	local t
-	for t in ${!TOO*}; do
-		[[ $t == TOO*_$SERVICE ]] && dieifknown "$t"
-	done
-}
-
-showurl() {
-	echo "Your ${2}paste can be seen here: $1"
-	[[ $XPASTE ]] && x_paste "$1"
-}
-
-# if possible convert URL to raw
-converttoraw() {
-	local regex
-	regex=REGEX_RAW_$ENGINE
-	if [[ -n ${!regex} ]]; then
-		RAWURL=$(sed -e "${!regex}" <<< "$URL")
-		set +x
-		return 0
-	fi
-	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
-	return 1
 }
 
 ### read cli options
@@ -402,18 +415,6 @@ done
 
 # set the separated options as input options.
 set -- "${ARGS[@]}"
-
-noargument() {
-	die "$0: option $1 requires an argument"
-}
-
-getfilenames() {
-	for f in "$@"; do
-		[[ -f $f ]] || die "$0: $f No such file found."
-		SOURCE="files"
-		FILES[${#FILES[*]}]="$f"
-	done
-}
 
 while [[ -n $1 ]]; do
 	case "$1" in
@@ -524,13 +525,6 @@ DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
-
-# show usage if requested
-[[ $USAGE ]] && usage && exit 0
-# show services if requested (need to honour --verbose)
-[[ $SHOWSERVICES ]] && showservices && exit 0
-
-# enable defaults
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
 ENGINE=ENGINE_$SERVICE
 ENGINE="${!ENGINE}"
@@ -541,7 +535,9 @@ NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS=No
 
-# show languages or expirations if requested (after the right service and default have been selected)
+# show listings if requested
+[[ $USAGE ]] && usage && exit 0
+[[ $SHOWSERVICES ]] && showservices && exit 0
 [[ $LISTLANGUAGES ]] && showlanguages && exit 0
 [[ $LISTEXPIRATION ]] && showexpirations && exit 0
 
@@ -550,7 +546,6 @@ CVT_TABS=No
 LANGUAGE=${LANGUAGE:-${DEFAULT_LANGUAGE}}
 verifylanguage
 LANGUAGE=$(escape "$LANGUAGE")
-
 EXPIRATION=${EXPIRATION:-${DEFAULT_EXPIRATION}}
 verifyexpiration
 EXPIRATION=$(escape "$EXPIRATION")
@@ -615,9 +610,6 @@ case "$SOURCE" in
 	fi
 	;;
 	files | stdin )
-	notreadable() {
-		die "The input source: \"$1\" is not readable. Please specify a readable input source."
-	}
 	if [[ ${#FILES[*]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
