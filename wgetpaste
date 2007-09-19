@@ -30,6 +30,9 @@ URL_osl="http://pastebin.osuosl.org/ pastebin.php"
 # sh
 ENGINE_sh=sh
 URL_sh="http://sh.nu/p/"
+# tinyurl
+ENGINE_tinyurl=tinyurl
+URL_tinyurl="http://tinyurl.com/ create.php"
 
 ### engines
 # ca
@@ -63,6 +66,9 @@ POST_osl="paste=Send poster % format expiry % code2"
 REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
 # sh
 POST_sh="% poster % % % % code"
+# tinyurl
+POST_tinyurl="submit=Make+TinyURL! % % % % % url"
+REGEX_URL_tinyurl='s|^<input type=hidden name=tinyurl value="\?\([^"]\+\)"\?>$|\1|p'
 
 ### errors
 die() {
@@ -239,6 +245,8 @@ Options:
     -L, --list-languages          list languages supported by the specified service
     -E, --list-expiration         list expiration setting supported by the specified service
 
+    -T, --tinyurl URL             convert input url to tinyurl
+
     -c, --command COMMAND         paste COMMAND and the output of COMMAND
     -i, --info                    append the output of \`$INFO_COMMAND\`
     -I, --info-only               paste the output of \`$INFO_COMMAND\` only
@@ -327,7 +335,7 @@ x_paste() {
 # get the url to post to
 getrecipient() {
 	local urls target serv
-	for s in $SERVICES; do
+	for s in $SERVICES tinyurl; do
 		if [[ $s == $SERVICE ]]; then
 			urls=URL_$SERVICE
 			if [[ RAW == $1 ]]; then
@@ -485,6 +493,10 @@ while [[ -n $1 ]]; do
 		;;
 		-t | --tee )
 		TEE=0
+		shift
+		;;
+		-T | --tinyurl )
+		SERVICE=tinyurl
 		shift
 		;;
 		-v | --verbose )
