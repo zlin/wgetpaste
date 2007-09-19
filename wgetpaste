@@ -368,7 +368,8 @@ converttoraw() {
 	local regex
 	regex=REGEX_RAW_$ENGINE
 	if [[ -n ${!regex} ]]; then
-		RAWURL=$(sed -e "$regex" <<< "$URL")
+		RAWURL=$(sed -e "${!regex}" <<< "$URL")
+		set +x
 		return 0
 	fi
 	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
