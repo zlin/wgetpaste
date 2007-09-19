@@ -21,17 +21,21 @@ escape() {
 
 ### default clipboard functions
 
+noxclip() {
+	cat <<EOF >&2
+Could not find xclip on your system. In order to use --x$1 you must
+either emerge x11-misc/xclip or define $2_clipboard() globally in
+/etc/wgetpaste or per user in ~/.wgetpaste to use another program
+(such as xcut or klipper) to $3 your clipboard.
+EOF
+	exit 1
+}
+
 get_from_clipboard() {
 	if [[ -x $(type -P xclip) ]]; then
 		xclip -o
 	else
-		cat <<EOF >&2
-Could not find xclip on your system. In order to use --xcut you must
-either emerge x11-misc/xclip or define get_from_clipboard() globally in
-/etc/wgetpaste or per user in ~/.wgetpaste to use another program
-(such as xcut or klipper) to read from your clipboard.
-EOF
-		exit 1		
+		noxclip cut get_from "read from"
 	fi
 }
 
@@ -39,13 +43,7 @@ add_to_clipboard() {
 	if [[ -x $(type -P xclip) ]]; then
 		xclip -loops 10 <<< "$*"
 	else
-		cat <<EOF >&2
-Could not find xclip on your system. In order to use --xpaste you must
-either emerge x11-misc/xclip or define add_to_clipboard() globally in
-/etc/wgetpaste or per user in ~/.wgetpaste to use another program
-(such as xcut or klipper) to write to your clipboard.
-EOF
-		exit 1
+		noxclip paste add_to "write to"
 	fi
 }
 
