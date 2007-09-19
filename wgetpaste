@@ -482,8 +482,7 @@ while [[ -n $1 ]]; do
 		;;
 		-s | --service )
 		[[ -z $2 ]] && noargument "$1"
-		verifyservice "$2"
-		SERVICE=$(escape "$2")
+		SERVICESET="$2"
 		shift 2
 		;;
 		-S | --list-services )
@@ -528,6 +527,7 @@ done
 		. "$f" || die "Failed to source $f"
 	fi
 done
+[[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
