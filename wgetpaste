@@ -511,8 +511,6 @@ while [[ -n $1 ]]; do
 	esac
 done
 
-### everything below this should be independent of which service is being used...
-
 ### defaults
 [[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
 	[[ -f $f ]] && . "$f"
@@ -533,6 +531,8 @@ CVT_TABS=No
 
 INFO_COMMAND="emerge --info"
 INFO_ARGS="--ignore-default-opts"
+
+### everything below this should be independent of which service is being used...
 
 # show listings if requested
 [[ $USAGE ]] && usage && exit 0
@@ -645,7 +645,7 @@ if [[ $INFO ]]; then
 	fi
 fi
 
-# now that tee has done it's job read data into INPUT
+# now that tee has done its job read data into INPUT
 [[ $TEE ]] && INPUT=$(<"$TMPF")
 
 # escape DESCRIPTION and INPUT
