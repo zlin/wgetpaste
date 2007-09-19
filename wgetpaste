@@ -245,7 +245,7 @@ Options:
     -L, --list-languages          list languages supported by the specified service
     -E, --list-expiration         list expiration setting supported by the specified service
 
-    -T, --tinyurl URL             convert input url to tinyurl
+    -u, --tinyurl URL             convert input url to tinyurl
 
     -c, --command COMMAND         paste COMMAND and the output of COMMAND
     -i, --info                    append the output of \`$INFO_COMMAND\`
