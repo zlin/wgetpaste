@@ -99,7 +99,7 @@ EOF
 
 # escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
 escape() {
-	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*"
+	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*" || die "sed failed"
 }	
 
 # if possible convert URL to raw
@@ -108,8 +108,7 @@ converttoraw() {
 	regex=REGEX_RAW_$ENGINE
 	if [[ -n ${!regex} ]]; then
 		RAWURL=$(sed -e "${!regex}" <<< "$URL")
-		set +x
-		return 0
+		[[ -n $RAWURL ]] && return 0
 	fi
 	echo "Raw download of pastes is not supported by $(getrecipient)." >&2
 	return 1
@@ -223,7 +222,7 @@ getfilenames() {
 
 x_cut() {
 	if [[ -x $(type -P xclip) ]]; then
-		xclip -o
+		xclip -o || die "xclip failed."
 	else
 		noxclip cut "read from"
 	fi
@@ -324,7 +323,7 @@ showurl() {
 
 x_paste() {
 	if [[ -x $(type -P xclip) ]]; then
-		xclip -loops 10 <<< "$*"
+		xclip -loops 10 <<< "$*" || die "xclip failed."
 	else
 		noxclip paste "write to"
 	fi
@@ -525,9 +524,11 @@ done
 
 ### defaults
 [[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
-	[[ -f $f ]] && . "$f"
+	if [[ -f $f ]]; then
+		. "$f" || die "Failed to source $f"
+	fi
 done
-DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
+DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
