@@ -11,7 +11,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca rafb osl sh"
+SERVICES="ca rafb osl"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
@@ -27,9 +27,6 @@ EXPIRATION_INFO_rafb="Pastes on rafb: http://rafb.net/paste/ expire after 24 hou
 # osl
 ENGINE_osl=osl
 URL_osl="http://pastebin.osuosl.org/ pastebin.php"
-# sh
-ENGINE_sh=sh
-URL_sh="http://sh.nu/p/"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ create.php"
@@ -64,8 +61,6 @@ EXPIRATIONS_osl="Never 1%day 1%month"
 EXPIRATION_VALUES_osl="f d m"
 POST_osl="paste=Send poster % format expiry % code2"
 REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
-# sh
-POST_sh="% poster % % % % code"
 # tinyurl
 POST_tinyurl="submit=Make+TinyURL! % % % % % url"
 REGEX_URL_tinyurl='s|^<input type=hidden name=tinyurl value="\?\([^"]\+\)"\?>$|\1|p'
@@ -195,13 +190,13 @@ verifyurl() {
 	done
 }
 
-# print a warning if failure is predictable due to the mere size of the paste. sh seems to be the most reliable
-# service in that regard. note that this is only a warning printed. it does not abort.
+# print a warning if failure is predictable due to the mere size of the paste. note that this is only a warning
+# printed. it does not abort.
 warnings() {
 	warn() {
 		if [[ -n $2 && $1 -gt $2 ]]; then
 			echo "Pasting > $3 often tend to fail with $SERVICE. Use --verbose or --debug to see the"
-			echo "error output from wget if it fails. Alternatively use another pastebin service like e.g. sh."
+			echo "error output from wget if it fails. Alternatively use another pastebin service."
 		fi
 	}
 	local size lines
