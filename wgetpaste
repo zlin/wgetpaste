@@ -110,15 +110,6 @@ REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
 # sh
 POST_sh="% poster % % % % code"
 
-### defaults
-for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
-	[[ -f $f ]] && . "$f"
-done
-DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
-DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
-DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
-DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
-
 ### usage
 
 usage() {
@@ -148,6 +139,7 @@ Options:
         --debug                   be *very* verbose (implies -v)
 
     -h, --help                    show this help
+    -g, --ignore-configs          ignore /etc/wgetpaste, ~/.wgetpaste etc.
         --version                 show version information
 
 Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
@@ -377,7 +369,7 @@ converttoraw() {
 
 ### read cli options
 
-# separate groups of short options. replace '--foo=bar' by '--foo bar'.
+# separate groups of short options. replace --foo=bar with --foo bar
 while [[ -n $1 ]]; do
 	case "$1" in
 		-- )
@@ -450,7 +442,12 @@ while [[ -n $1 ]]; do
 		shift
 		;;
 		-h | --help )
-		usage && exit 0
+		USAGE=0
+		shift
+		;;
+		-g | --ignore-configs )
+		IGNORECONFIGS=0
+		shift
 		;;
 		-i | --info )
 		INFO=0
@@ -519,6 +516,17 @@ done
 
 ### everything below this should be independent of which service is being used...
 
+### defaults
+[[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
+	[[ -f $f ]] && . "$f"
+done
+DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)}
+DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
+DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
+DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
+
+# show usage if requested
+[[ $USAGE ]] && usage && exit 0
 # show services if requested (need to honour --verbose)
 [[ $SHOWSERVICES ]] && showservices && exit 0
 
