@@ -10,10 +10,6 @@ VERSION="9999"
 E=$'\e'
 N=$'\n'
 
-# Used for --info and --info-only
-INFO_COMMAND="emerge --info"
-INFO_ARGS="--ignore-default-opts"
-
 ### services
 SERVICES="ca rafb osl sh"
 # ca
@@ -534,6 +530,9 @@ default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_EXPIRAT
 NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS=No
+
+INFO_COMMAND="emerge --info"
+INFO_ARGS="--ignore-default-opts"
 
 # show listings if requested
 [[ $USAGE ]] && usage && exit 0
