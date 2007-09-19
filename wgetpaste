@@ -24,26 +24,27 @@ escape() {
 noxclip() {
 	cat <<EOF >&2
 Could not find xclip on your system. In order to use --x$1 you must
-either emerge x11-misc/xclip or define $2_clipboard() globally in
-/etc/wgetpaste or per user in ~/.wgetpaste to use another program
-(such as xcut or klipper) to $3 your clipboard.
+either emerge x11-misc/xclip or define x_$1() globally in /etc/wgetpaste
+or per user in ~/.wgetpaste to use another program (such as e.g. xcut or
+klipper) to $2 your clipboard.
+
 EOF
 	exit 1
 }
 
-get_from_clipboard() {
+x_cut() {
 	if [[ -x $(type -P xclip) ]]; then
 		xclip -o
 	else
-		noxclip cut get_from "read from"
+		noxclip cut "read from"
 	fi
 }
 
-add_to_clipboard() {
+x_paste() {
 	if [[ -x $(type -P xclip) ]]; then
 		xclip -loops 10 <<< "$*"
 	else
-		noxclip paste add_to "write to"
+		noxclip paste "write to"
 	fi
 }
 
@@ -358,7 +359,7 @@ verifyurl() {
 
 showurl() {
 	echo "Your ${2}paste can be seen here: $1"
-	[[ $XPASTE ]] && add_to_clipboard "$1"
+	[[ $XPASTE ]] && x_paste "$1"
 }
 
 # if possible convert URL to raw
@@ -600,9 +601,9 @@ case "$SOURCE" in
 	;;
 	xcut )
 	if [[ $TEE ]]; then
-		get_from_clipboard | tee "$TMPF"
+		x_cut | tee "$TMPF"
 	else
-		INPUT="$(get_from_clipboard)"
+		INPUT="$(x_cut)"
 	fi
 	;;
 	files | stdin )
