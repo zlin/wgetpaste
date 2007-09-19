@@ -144,6 +144,7 @@ Options:
     -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
+    -t, --tee                     use tee to show what is being pasted
     -v, --verbose                 show wget stderr output if no url is received
         --debug                   be *very* verbose (implies -v)
 
@@ -488,6 +489,10 @@ while [[ -n $1 ]]; do
 		SHOWSERVICES=0
 		shift
 		;;
+		-t | --tee )
+		TEE=0
+		shift
+		;;
 		-v | --verbose )
 		VERBOSE=0
 		shift
@@ -570,18 +575,36 @@ if [[ -z $DESCRIPTION ]]; then
 	esac
 fi
 
+# create tmpfile for use with tee
+if [[ $TEE ]]; then
+	TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
+	[[ -f $TMPF ]] || die "Could not create a temporary file for use with tee."
+fi
+
 # read input
 case "$SOURCE" in
 	command )
 	for c in "${COMMANDS[@]}"; do
-		INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1)$N$N"
+		if [[ $TEE ]]; then
+			{ echo "$PS1 $c"; bash -c "$c" 2>&1; echo; } | tee -a "$TMPF"
+		else
+			INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1)$N$N"
+		fi
 	done
 	;;
 	info )
-	INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS)"
+	if [[ $TEE ]]; then
+		{ echo "$PS1 $INFO_COMMAND"; $INFO_COMMAND $INFO_ARGS 2>&1; } | tee "$TMPF"
+	else
+		INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
+	fi
 	;;
 	xcut )
-	INPUT="$(get_from_clipboard)"
+	if [[ $TEE ]]; then
+		get_from_clipboard | tee "$TMPF"
+	else
+		INPUT="$(get_from_clipboard)"
+	fi
 	;;
 	files | stdin )
 	notreadable() {
@@ -590,21 +613,41 @@ case "$SOURCE" in
 	if [[ ${#FILES[*]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
-			INPUT="$INPUT$PS1 cat $f$N$( < "$f" )$N$N"
+			if [[ $TEE ]]; then
+				tee -a "$TMPF" < "$f"
+			else
+				INPUT="$INPUT$PS1 cat $f$N$( < "$f" )$N$N"
+			fi
 		done
 	else
 		[[ -r $FILES ]] || notreadable "$FILES"
-		INPUT=$(<"$FILES")
+		if [[ $TEE ]]; then
+			tee "$TMPF" < "$FILES"
+		else
+			INPUT=$(<"$FILES")
+		fi
 	fi
 	;;
 esac
-[[ -z $INPUT ]] && die "No input read. Nothing to paste. Aborting."
+NOINPUT="No input read. Nothing to paste. Aborting."
+if [[ $TEE ]]; then
+	[[ 0 -eq $(wc -c < "$TMPF") ]] && die "$NOINPUT"
+else
+	[[ -z $INPUT ]] && die "$NOINPUT"
+fi
 
 # append info if needed
 if [[ $INFO ]]; then
 	DESCRIPTION="$DESCRIPTION $PS1 $INFO_COMMAND;"
-	INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
+	if [[ $TEE ]]; then
+		{ echo "$PS1 $INFO_COMMAND"; $INFO_COMMAND $INFO_ARGS 2>&1; } | tee -a "$TMPF"
+	else
+		INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
+	fi
 fi
+
+# now that tee has done it's job read data into INPUT
+[[ $TEE ]] && INPUT=$(<"$TMPF")
 
 # escape DESCRIPTION and INPUT
 DESCRIPTION=$(escape "$DESCRIPTION")
@@ -616,10 +659,10 @@ LINES=$(wc -l <<< "$INPUT")
 warnings >&2
 
 # create temp file (wget is much more reliable reading large input via --post-file rather than --post-data)
-TEMPFILE=$(mktemp /tmp/wgetpaste.XXXXXX)
-if [[ -f $TEMPFILE ]]; then
-    postdata > "$TEMPFILE" || die "Failed to write to temporary file: \"$TEMPFILE\"."
-    WGETARGS="--post-file=$TEMPFILE"
+[[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
+if [[ -f $TMPF ]]; then
+    postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
+    WGETARGS="--post-file=$TMPF"
 else
 	# fall back to using --post-data if the temporary file could not be created
 	# TABs and new lines need to be escaped for wget to interpret it as one string
@@ -638,11 +681,11 @@ else
 fi
 
 # clean temporary file if it was created
-if [[ -f $TEMPFILE ]]; then
+if [[ -f $TMPF ]]; then
 	if [[ $DEBUG ]]; then
-		echo "Left temporary file: \"$TEMPFILE\" alone for debugging purposes."
+		echo "Left temporary file: \"$TMPF\" alone for debugging purposes."
 	else
-		rm "$TEMPFILE" || echo "Failed to remove temporary file: \"$TEMPFILE\"." >&2
+		rm "$TMPF" || echo "Failed to remove temporary file: \"$TMPF\"." >&2
 	fi
 fi
 
