@@ -495,7 +495,7 @@ while [[ -n $1 ]]; do
 		TEE=0
 		shift
 		;;
-		-T | --tinyurl )
+		-u | --tinyurl )
 		SERVICE=tinyurl
 		shift
 		;;
