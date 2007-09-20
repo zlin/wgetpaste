@@ -73,6 +73,7 @@ die() {
 
 requiredarg() {
 	[[ -z $2 ]] && die "$0: option $1 requires an argument"
+	((args++))
 }
 
 notreadable() {
@@ -415,105 +416,88 @@ done
 set -- "${ARGS[@]}"
 
 while [[ -n $1 ]]; do
+	((args=1))
 	case "$1" in
 		-- )
 		shift && getfilenames "$@" && break
 		;;
 		-c | --command )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="$2"
-		shift 2
 		;;
 		-d | --description )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		DESCRIPTION="$2"
-		shift 2
 		;;
 		-e | --expiration )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		EXPIRATIONSET=0
 		EXPIRATION="$2"
-		shift 2
 		;;
 		-E | --list-expiration )
 		LISTEXPIRATION=0
-		shift
 		;;
 		-h | --help )
 		USAGE=0
-		shift
 		;;
 		-g | --ignore-configs )
 		IGNORECONFIGS=0
-		shift
 		;;
 		-i | --info )
 		INFO=0
-		shift
 		;;
 		-I | --info-only )
 		SOURCE=info
-		shift
 		;;
 		-l | --language )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		LANGUAGESET=0
 		LANGUAGE="$2"
-		shift 2
 		;;
 		-L | --list-languages )
 		LISTLANGUAGES=0
-		shift
 		;;
 		-n | --nick )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		NICK=$(escape "$2")
-		shift 2
 		;;
 		-r | --raw )
 		RAW=0
-		shift
 		;;
 		-s | --service )
-		requiredarg "$1" "$2"
+		requiredarg "$@"
 		SERVICESET="$2"
-		shift 2
 		;;
 		-S | --list-services )
 		SHOWSERVICES=0
-		shift
 		;;
 		-t | --tee )
 		TEE=0
-		shift
 		;;
 		-u | --tinyurl )
 		SERVICE=tinyurl
-		shift
 		;;
 		-v | --verbose )
 		VERBOSE=0
-		shift
 		;;
 		--version )
 		echo "$0, version $VERSION" && exit 0
 		;;
 		-x | --xcut )
 		SOURCE=xcut
-		shift
 		;;
 		-X | --xpaste )
 		XPASTE=0
-		shift
 		;;
 		-* )
 		die "$0: unrecognized option \`$1'"
 		;;
 		*)
-		getfilenames "$1" && shift
+		getfilenames "$1"
 		;;
 	esac
+	shift $args
 done
 
 ### defaults
@@ -596,7 +580,7 @@ case "$SOURCE" in
 	command )
 	for c in "${COMMANDS[@]}"; do
 		if [[ $TEE ]]; then
-			{ echo "$PS1 $c"; bash -c "$c" 2>&1; echo; } | tee -a "$TMPF"
+			echo "$PS1 $c$N$(bash -c "$c" 2>&1)$N" | tee -a "$TMPF"
 		else
 			INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1)$N$N"
 		fi
@@ -604,7 +588,7 @@ case "$SOURCE" in
 	;;
 	info )
 	if [[ $TEE ]]; then
-		{ echo "$PS1 $INFO_COMMAND"; $INFO_COMMAND $INFO_ARGS 2>&1; } | tee "$TMPF"
+		echo "$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)" | tee "$TMPF"
 	else
 		INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
 	fi
@@ -621,9 +605,9 @@ case "$SOURCE" in
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
 			if [[ $TEE ]]; then
-				tee -a "$TMPF" < "$f"
+				echo "$PS1 cat $f$N$(<"$f")$N" | tee -a "$TMPF"
 			else
-				INPUT="$INPUT$PS1 cat $f$N$( < "$f" )$N$N"
+				INPUT="$INPUT$PS1 cat $f$N$(<"$f")$N$N"
 			fi
 		done
 	else
@@ -647,14 +631,14 @@ fi
 if [[ $INFO ]]; then
 	DESCRIPTION="$DESCRIPTION $PS1 $INFO_COMMAND;"
 	if [[ $TEE ]]; then
-		{ echo "$PS1 $INFO_COMMAND"; $INFO_COMMAND $INFO_ARGS 2>&1; } | tee -a "$TMPF"
+		echo "$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)" | tee -a "$TMPF"
 	else
 		INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
 	fi
 fi
 
 # now that tee has done its job read data into INPUT
-[[ $TEE ]] && INPUT=$(<"$TMPF")
+[[ $TEE ]] && INPUT=$(<"$TMPF") && echo
 
 # escape DESCRIPTION and INPUT
 DESCRIPTION=$(escape "$DESCRIPTION")
