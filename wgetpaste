@@ -71,8 +71,8 @@ die() {
 	exit 1
 }
 
-noargument() {
-	die "$0: option $1 requires an argument"
+requiredarg() {
+	[[ -z $2 ]] && die "$0: option $1 requires an argument"
 }
 
 notreadable() {
@@ -420,18 +420,18 @@ while [[ -n $1 ]]; do
 		shift && getfilenames "$@" && break
 		;;
 		-c | --command )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="$2"
 		shift 2
 		;;
 		-d | --description )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		DESCRIPTION="$2"
 		shift 2
 		;;
 		-e | --expiration )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		EXPIRATIONSET=0
 		EXPIRATION="$2"
 		shift 2
@@ -457,7 +457,7 @@ while [[ -n $1 ]]; do
 		shift
 		;;
 		-l | --language )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		LANGUAGESET=0
 		LANGUAGE="$2"
 		shift 2
@@ -467,7 +467,7 @@ while [[ -n $1 ]]; do
 		shift
 		;;
 		-n | --nick )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		NICK=$(escape "$2")
 		shift 2
 		;;
@@ -476,7 +476,7 @@ while [[ -n $1 ]]; do
 		shift
 		;;
 		-s | --service )
-		[[ -z $2 ]] && noargument "$1"
+		requiredarg "$1" "$2"
 		SERVICESET="$2"
 		shift 2
 		;;
