@@ -4,7 +4,7 @@
 # Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed as-is. With no warranties.
 
-VERSION="9999"
+VERSION="2.6"
 
 # escape and new line characters
 E=$'\e'
