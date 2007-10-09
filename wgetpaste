@@ -214,7 +214,7 @@ getfilenames() {
 	for f in "$@"; do
 		[[ -f $f ]] || die "$0: $f No such file found."
 		SOURCE="files"
-		FILES[${#FILES[*]}]="$f"
+		FILES+=("$f")
 	done
 }
 
@@ -388,7 +388,7 @@ while [[ -n $1 ]]; do
 	case "$1" in
 		-- )
 		for arg in "$@"; do
-			ARGS[${#ARGS[*]}]="$arg"
+			ARGS+=("$arg")
 		done
 		break
 		;;
@@ -397,19 +397,19 @@ while [[ -n $1 ]]; do
 		DEBUG=0
 		;;
 		--*=* )
-		ARGS[${#ARGS[*]}]="${1%%=*}"
-		ARGS[${#ARGS[*]}]="${1#*=}"
+		ARGS+=("${1%%=*}")
+		ARGS+=("${1#*=}")
 		;;
 		--* )
-		ARGS[${#ARGS[*]}]="$1"
+		ARGS+=("$1")
 		;;
 		-* )
 		for shortarg in $(sed 's|.| -&|g' <<< "${1#-}"); do
-			ARGS[${#ARGS[*]}]="$shortarg"
+			ARGS+=("$shortarg")
 		done
 		;;
 		* )
-		ARGS[${#ARGS[*]}]="$1"
+		ARGS+=("$1")
 	esac
 	shift
 done
@@ -426,7 +426,7 @@ while [[ -n $1 ]]; do
 		-c | --command )
 		requiredarg "$@"
 		SOURCE="command"
-		COMMANDS[${#COMMANDS[*]}]="$2"
+		COMMANDS+=("$2")
 		;;
 		-d | --description )
 		requiredarg "$@"
@@ -520,7 +520,7 @@ default="DEFAULT_NICK_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_NICK=${!defau
 default="DEFAULT_LANGUAGE_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_LANGUAGE=${!default}
 default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_EXPIRATION=${!default}
 NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
-[[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
+[[ -z $SOURCE ]] && SOURCE="stdin" && FILES+=("/dev/stdin")
 CVT_TABS=No
 
 INFO_COMMAND="emerge --info"
@@ -563,7 +563,7 @@ if [[ -z $DESCRIPTION ]]; then
 		done
 		;;
 		files )
-		DESCRIPTION="${FILES[*]}"
+		DESCRIPTION="${FILES[@]}"
 		;;
 		* )
 		DESCRIPTION="$SOURCE"
@@ -603,7 +603,7 @@ case "$SOURCE" in
 	fi
 	;;
 	files | stdin )
-	if [[ ${#FILES[*]} -gt 1 ]]; then
+	if [[ ${#FILES[@]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
 			if [[ $TEE ]]; then
@@ -654,12 +654,12 @@ warnings >&2
 # create temp file (wget is much more reliable reading large input via --post-file rather than --post-data)
 [[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
 if [[ -f $TMPF ]]; then
-    postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
-    WGETARGS="--post-file=$TMPF"
+	postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
+	WGETARGS="--post-file=$TMPF"
 else
 	# fall back to using --post-data if the temporary file could not be created
 	# TABs and new lines need to be escaped for wget to interpret it as one string
-    WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
+	WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 fi
 
 # set recipient
