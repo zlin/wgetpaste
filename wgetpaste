@@ -198,7 +198,7 @@ verifyurl() {
 warnings() {
 	warn() {
 		if [[ -n $2 && $1 -gt $2 ]]; then
-			echo "Pasting > $3 often tend to fail with $SERVICE. Use --verbose or --debug to see the"
+			echo "Pasting > ${3//\%/ } often tend to fail with $SERVICE. Use --verbose or --debug to see the"
 			echo "error output from wget if it fails. Alternatively use another pastebin service."
 		fi
 	}
