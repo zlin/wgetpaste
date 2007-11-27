@@ -6,6 +6,9 @@
 
 VERSION="9999"
 
+# don't inherit LANGUAGE from the env
+unset LANGUAGE
+
 # escape and new line characters
 E=$'\e'
 N=$'\n'
