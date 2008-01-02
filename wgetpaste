@@ -4,7 +4,7 @@
 # Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed as-is. With no warranties.
 
-VERSION="9999"
+VERSION="2.8"
 
 # don't inherit LANGUAGE from the env
 unset LANGUAGE
