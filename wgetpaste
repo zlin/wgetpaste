@@ -44,8 +44,8 @@ EXPIRATIONS_ca="Never 5%minutes 10%minutes 15%minutes 30%minutes 45%minutes 1%ho
 4%hours 8%hours 12%hours 1%day 2%days 3%days 1%week 2%weeks 3%weeks 1%month 2%months \
 3%months 4%months 5%months 6%months 1%year"
 POST_ca="s=Submit+Post name description type expiry % content"
-REGEX_URL_ca='s|^.*content="[0-9]\+;\(http://[^/]\+/[0-9]\+\)".*$|\1|p'
-REGEX_RAW_ca='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1raw/\2|'
+REGEX_URL_ca='s|^.*content="[0-9]*;\(http://[^/]*/[0-9]*\)".*$|\1|p'
+REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
 # rafb
 LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain%Text"
 POST_rafb="% nick desc lang % cvt_tabs text"
@@ -63,10 +63,10 @@ qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml"
 EXPIRATIONS_osl="Never 1%day 1%month"
 EXPIRATION_VALUES_osl="f d m"
 POST_osl="paste=Send poster % format expiry % code2"
-REGEX_RAW_osl='s|^\(http://[^/]\+/\)\([0-9]\+\)$|\1pastebin.php?dl=\2|'
+REGEX_RAW_osl='s|^\(http://[^/]*/\)\([0-9]*\)$|\1pastebin.php?dl=\2|'
 # tinyurl
 POST_tinyurl="submit=Make+TinyURL! % % % % % url"
-REGEX_URL_tinyurl='s|^<input type=hidden name=tinyurl value="\?\([^"]\+\)"\?>$|\1|p'
+REGEX_URL_tinyurl='s|^<input type=hidden name=tinyurl value="\?\([^"]*\)"\?>$|\1|p'
 
 ### errors
 die() {
@@ -377,10 +377,10 @@ geturl() {
 	regex=REGEX_URL_$ENGINE
 	if [[ -n ${!regex} ]]; then
 		[[ needstdout = $1 ]] && return 0
-		sed -n "${!regex}" <<< "$*"
+		sed -n -e "${!regex}" <<< "$*"
 	else
 		[[ needstdout = $1 ]] && return 1
-		sed -n 's|^.*Location:\ \(http://[^\ ]\+\).*$|\1|p' <<< "$*"
+		sed -n -e 's|^.*Location: \(http://[^ ]*\).*$|\1|p' <<< "$*"
 	fi
 }
 
@@ -407,7 +407,7 @@ while [[ -n $1 ]]; do
 		ARGS[${#ARGS[*]}]="$1"
 		;;
 		-* )
-		for shortarg in $(sed 's|.| -&|g' <<< "${1#-}"); do
+		for shortarg in $(sed -e 's|.| -&|g' <<< "${1#-}"); do
 			ARGS[${#ARGS[*]}]="$shortarg"
 		done
 		;;
