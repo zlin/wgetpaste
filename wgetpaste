@@ -324,7 +324,7 @@ showurl() {
 
 x_paste() {
 	if [[ -x $(type -P xclip) ]]; then
-		xclip -loops 10 <<< "$*" || die "xclip failed."
+		xclip -loops 10 &>/dev/null <<< "$*" || die "xclip failed."
 	else
 		noxclip paste "write to"
 	fi
