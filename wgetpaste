@@ -169,7 +169,7 @@ verifyexpiration() {
 				elif [[ -n {!values} ]]; then
 					((j=0))
 					for v in ${!values}; do
-						[[ i -eq j ]] && EXPIRATION=${e//\%/ } && break
+						[[ i -eq j ]] && EXPIRATION=${v//\%/ } && break
 						((j++))
 					done
 				fi
