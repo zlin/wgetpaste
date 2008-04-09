@@ -526,8 +526,8 @@ NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
 [[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
 CVT_TABS=No
 
-INFO_COMMAND="emerge --info"
-INFO_ARGS="--ignore-default-opts"
+INFO_COMMAND=${INFO_COMMAND:-"emerge --info"}
+INFO_ARGS=${INFO_ARGS:-"--ignore-default-opts"}
 
 ### everything below this should be independent of which service is being used...
 
