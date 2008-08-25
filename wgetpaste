@@ -519,11 +519,31 @@ while [[ -n $1 ]]; do
 done
 
 ### defaults
-[[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*,}.conf; do
-	if [[ -f $f ]]; then
-		source "$f" || die "Failed to source $f"
+load_configs() {
+	if [[ ! $IGNORECONFIGS ]]; then
+		# compatibility code
+		local f deprecated=
+		for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
+			if [[ -f $f ]]; then
+				if [[ -z $deprecated ]]; then
+					echo "The config files for wgetpaste have changed to *.conf." >&2
+					echo >&2
+					deprecated=0
+				fi
+				echo "Please move ${f} to ${f%.bash}.conf" >&2
+				source "$f" || die "Failed to source $f"
+			fi
+		done
+		[[ -n $deprecated ]] && echo >&2
+		# new locations override old ones in case they collide
+		for f in {/etc/,~/.}wgetpaste{.d/*,}.conf; do
+			if [[ -f $f ]]; then
+				source "$f" || die "Failed to source $f"
+			fi
+		done
 	fi
-done
+}
+load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
