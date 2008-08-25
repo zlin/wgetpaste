@@ -251,7 +251,8 @@ Options:
     -i, --info                    append the output of \`$INFO_COMMAND\`
     -I, --info-only               paste the output of \`$INFO_COMMAND\` only
     -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
-    -X, --xpaste                  write resulting url to clipboard (requires x11-misc/xclip)
+    -X, --xpaste                  write resulting url to the X primary selection buffer (requires x11-misc/xclip)
+    -C, --xclippaste              write resulting url to the X clipboard selection buffer (requires x11-misc/xclip)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
@@ -320,13 +321,22 @@ showexpirations() {
 showurl() {
 	echo "Your ${2}paste can be seen here: $1"
 	[[ $XPASTE ]] && x_paste "$1"
+	[[ $XCLIPPASTE ]] && x_clip_paste "$1"
 }
 
 x_paste() {
 	if [[ -x $(type -P xclip) ]]; then
-		xclip -loops 10 &>/dev/null <<< "$*" || die "xclip failed."
+		echo -n "$*" | xclip -selection primary -loops 10 &>/dev/null || die "xclip failed."
 	else
 		noxclip paste "write to"
+	fi
+}
+
+x_clip_paste() {
+	if [[ -x $(type -P xclip) ]]; then
+		echo -n "$*" | xclip -selection clipboard -loops 10 &>/dev/null || die "xclip failed."
+	else
+		noxclip clip_paste "write to"
 	fi
 }
 
@@ -494,6 +504,9 @@ while [[ -n $1 ]]; do
 		;;
 		-X | --xpaste )
 		XPASTE=0
+		;;
+		-C | --xclippaste )
+		XCLIPPASTE=0
 		;;
 		-* )
 		die "$0: unrecognized option \`$1'"
