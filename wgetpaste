@@ -85,9 +85,9 @@ notreadable() {
 
 noxclip() {
 	cat <<EOF >&2
-Could not find xclip on your system. In order to use --x$1 you must
-either emerge x11-misc/xclip or define x_$1() globally in /etc/wgetpaste
-or per user in ~/.wgetpaste to use another program (such as e.g. xcut or
+Could not find xclip on your system. In order to use --x$1 you must either
+emerge x11-misc/xclip or define x_$1() globally in /etc/wgetpaste.conf or
+per user in ~/.wgetpaste.conf to use another program (such as e.g. xcut or
 klipper) to $2 your clipboard.
 
 EOF
@@ -260,12 +260,12 @@ Options:
         --debug                   be *very* verbose (implies -v)
 
     -h, --help                    show this help
-    -g, --ignore-configs          ignore /etc/wgetpaste, ~/.wgetpaste etc.
+    -g, --ignore-configs          ignore /etc/wgetpaste.conf, ~/.wgetpaste.conf etc.
         --version                 show version information
 
 Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
-globally in /etc/wgetpaste or /etc/wgetpaste.d/*.bash or per user in any of ~/.wgetpaste
-or ~/.wgetpaste.d/*.bash.
+globally in /etc/wgetpaste.conf or /etc/wgetpaste.d/*.conf or per user in any of
+~/.wgetpaste.conf or ~/.wgetpaste.d/*.conf.
 EOF
 }
 
@@ -519,9 +519,9 @@ while [[ -n $1 ]]; do
 done
 
 ### defaults
-[[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
+[[ $IGNORECONFIGS ]] || for f in {/etc/,~/.}wgetpaste{.d/*,}.conf; do
 	if [[ -f $f ]]; then
-		. "$f" || die "Failed to source $f"
+		source "$f" || die "Failed to source $f"
 	fi
 done
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
