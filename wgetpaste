@@ -49,7 +49,6 @@ REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
 # rafb
 LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain%Text"
 POST_rafb="% nick desc lang % cvt_tabs text"
-REGEX_RAW_rafb='s|html\?$|txt|'
 # osl
 LANGUAGES_osl="Plain%Text ActionScript Ada Apache%Log%File AppleScript Assembly%(NASM) \
 ASP Bash C C%for%Macs CAD%DCL CAD%Lisp C++ C# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
