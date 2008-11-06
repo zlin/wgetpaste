@@ -14,11 +14,15 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca rafb osl"
+SERVICES="ca dpaste rafb osl"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
 SIZE_ca="1024000 1%MB"
+# dpaste
+ENGINE_dpaste=dpaste
+URL_dpaste="http://dpaste.com/"
+DEFAULT_EXPIRATION_dpaste="30 days"
 # rafb
 ENGINE_rafb=rafb
 URL_rafb="http://rafb.net/paste/ paste.php"
@@ -46,6 +50,15 @@ EXPIRATIONS_ca="Never 5%minutes 10%minutes 15%minutes 30%minutes 45%minutes 1%ho
 POST_ca="s=Submit+Post name description type expiry % content"
 REGEX_URL_ca='s|^.*content="[0-9]*;\(http://[^/]*/[0-9]*\)".*$|\1|p'
 REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
+# dpaste
+LANGUAGES_dpaste="Plain%Text Apache%Config Bash CSS Diff Django%Template/HTML Haskell JavaScript \
+Python Python%Interactive/Traceback Ruby Ruby%HTML%(ERB) SQL XML"
+LANGUAGE_VALUES_dpaste="% Apache Bash Css Diff DjangoTemplate Haskell JScript Python PythonConsole \
+Ruby Rhtml Sql Xml"
+EXPIRATIONS_dpaste="30%days 30%days%after%last%view"
+EXPIRATION_VALUES_dpaste="off on"
+POST_dpaste="submit=Paste+it poster title language hold % content"
+REGEX_RAW_dpaste='s|^\(http://[^/]*/\)[^0-9]*\([0-9]*/\)$|\1\2plain/|'
 # rafb
 LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain%Text"
 POST_rafb="% nick desc lang % cvt_tabs text"
@@ -562,7 +575,7 @@ load_configs() {
 load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
-DEFAULT_SERVICE=${DEFAULT_SERVICE:-rafb}
+DEFAULT_SERVICE=${DEFAULT_SERVICE:-dpaste}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
