@@ -271,7 +271,7 @@ EOF
 showservices() {
 	echo "Services supported: (case sensitive):"
 	local max s IND INDV engine url d
-	max=0
+	max=4
 	for s in $SERVICES; do
 		[[ ${#s} -gt $max ]] && max=${#s}
 	done
@@ -284,13 +284,16 @@ showservices() {
 			[[ ${#s} -gt $max ]] && max=${#s}
 		done
 		((INDV=3+max+IND))
+		engine=" $E[${INDV}G| Pastebin engine:"
 	fi
+	echo "   Name: $E[${IND}G| Url:$engine"
+	echo -ne "   "; for((s=3;s<${INDV:-${IND}}+17;s++)); do (( $s == IND-1 || $s == INDV-1 )) && echo -ne "|" || echo -ne "="; done; echo
 	for s in $SERVICES; do
 		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
-		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="$E[${INDV}G- ${!engine}"
+		[[ $VERBOSE ]] && engine=ENGINE_$s && engine="$E[${INDV}G| ${!engine}"
 		url=URL_$s
 		url=${!url% *}
-		echo "   $d$s $E[${IND}G- $url$engine"
+		echo "   $d$s $E[${IND}G| $url$engine"
 	done | sort
 }
 
