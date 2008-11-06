@@ -641,7 +641,7 @@ if [[ -z $DESCRIPTION ]]; then
 	fi
 else
 	if [[ -n ${!size} && ${#DESCRIPTION} -gt ${!size} ]]; then
-		die "The description for this pastebin service can be at most ${!size} bytes. You specified a description of ${#DESCRIPTION} bytes."
+		die "Your description (${#DESCRIPTION} bytes) is too long. Shorten it to fit within ${!size} bytes."
 	fi
 fi
 
