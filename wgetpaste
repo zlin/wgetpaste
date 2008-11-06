@@ -95,10 +95,10 @@ EOF
 
 ### conversions
 
-# escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data) and space
+# escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data), space and ;
 escape() {
-	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's| |+|g' <<< "$*" || die "sed failed"
-}	
+	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's|;|%3b|g' -e 's| |+|g' <<< "$*" || die "sed failed"
+}
 
 # if possible convert URL to raw
 converttoraw() {
@@ -138,7 +138,14 @@ verifylanguage() {
 				elif [[ -n ${!values} ]]; then
 					((j=0))
 					for v in ${!values}; do
-						[[ i -eq j ]] && LANGUAGE=${v//\%/ } && break
+						if [[ i -eq j ]]; then
+							if [[ ${v} == \% ]]; then
+								LANGUAGE=
+							else
+								LANGUAGE=${v//\%/ }
+							fi
+							break
+						fi
 						((j++))
 					done
 				fi
@@ -168,7 +175,14 @@ verifyexpiration() {
 				elif [[ -n {!values} ]]; then
 					((j=0))
 					for v in ${!values}; do
-						[[ i -eq j ]] && EXPIRATION=${v//\%/ } && break
+						if [[ i -eq j ]]; then
+							if [[ ${v} == \% ]]; then
+								EXPIRATION=
+							else
+								EXPIRATION=${v//\%/ }
+							fi
+							break
+						fi
 						((j++))
 					done
 				fi
