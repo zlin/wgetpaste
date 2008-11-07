@@ -329,7 +329,7 @@ showlanguages() {
 	echo "Languages supported by $(getrecipient) (case sensitive):"
 	local l lang d
 	lang=LANGUAGES_$ENGINE
-	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2
+	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2 && exit 1
 	for l in ${!lang}; do
 		[[ ${l//\%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
 		echo "   $d${l//\%/ }"
@@ -341,7 +341,7 @@ showexpirations() {
 	local e expiration info d
 	expiration=EXPIRATIONS_$ENGINE
 	info=EXPIRATION_INFO_$SERVICE
-	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2
+	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2 && exit 1
 	for e in ${!expiration}; do
 		[[ ${e//\%/ } = $DEFAULT_EXPIRATION ]] && d="*" || d=" "
 		echo "   $d${e//\%/ }"
