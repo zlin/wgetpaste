@@ -284,6 +284,7 @@ Options:
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
     -v, --verbose                 show wget stderr output if no url is received
+        --completions             emit output suitable for shell completions (only affects --list-*)
         --debug                   be *very* verbose (implies -v)
 
     -h, --help                    show this help
@@ -297,8 +298,18 @@ EOF
 }
 
 showservices() {
-	echo "Services supported: (case sensitive):"
 	local max s IND INDV engine url d
+	if [[ -n $COMPLETIONS ]]; then
+		for s in $SERVICES; do
+			if [[ -n $VERBOSE ]]; then
+				d=URL_$s && echo "$s:${!d% *}"
+			else
+				echo "$s"
+			fi
+		done
+		exit 0
+	fi
+	echo "Services supported: (case sensitive):"
 	max=4
 	for s in $SERVICES; do
 		[[ ${#s} -gt $max ]] && max=${#s}
@@ -325,10 +336,18 @@ showservices() {
 	done | sort
 }
 
+printlist() {
+	while [[ -n $1 ]]; do
+		echo "${1//\%/ }"
+		shift
+	done
+}
+
 showlanguages() {
-	echo "Languages supported by $(getrecipient) (case sensitive):"
 	local l lang d
 	lang=LANGUAGES_$ENGINE
+	[[ -n $COMPLETIONS ]] && printlist ${!lang} | sort && exit 0
+	echo "Languages supported by $(getrecipient) (case sensitive):"
 	[[ -z ${!lang} ]] && echo "$N\"$ENGINE\" has no support for setting language." >&2 && exit 1
 	for l in ${!lang}; do
 		[[ ${l//\%/ } = $DEFAULT_LANGUAGE ]] && d="*" || d=" "
@@ -337,9 +356,10 @@ showlanguages() {
 }
 
 showexpirations() {
-	echo "Expiration options supported by $(getrecipient) (case sensitive):"
 	local e expiration info d
 	expiration=EXPIRATIONS_$ENGINE
+	[[ -n $COMPLETIONS ]] && printlist ${!expiration} && exit 0
+	echo "Expiration options supported by $(getrecipient) (case sensitive):"
 	info=EXPIRATION_INFO_$SERVICE
 	[[ -z ${!expiration} ]] && echo "$N${!info}\"$ENGINE\" has no support for setting expiration." >&2 && exit 1
 	for e in ${!expiration}; do
@@ -462,6 +482,9 @@ while [[ -n $1 ]]; do
 		requiredarg "$@"
 		SOURCE="command"
 		COMMANDS[${#COMMANDS[*]}]="$2"
+		;;
+		--completions )
+		COMPLETIONS=0
 		;;
 		-d | --description )
 		requiredarg "$@"
