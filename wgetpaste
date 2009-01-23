@@ -264,7 +264,7 @@ Usage: $0 [options] [file[s]]
 Options:
     -l, --language LANG           set language (defaults to "$DEFAULT_LANGUAGE")
     -d, --description DESCRIPTION set description (defaults to "stdin" or filename)
-    -n, --nick NICK               set nick (defaults to your username))
+    -n, --nick NICK               set nick (defaults to your username)
     -s, --service SERVICE         set service to use (defaults to "$DEFAULT_SERVICE")
     -e, --expiration EXPIRATION   set when it should expire (defaults to "$DEFAULT_EXPIRATION")
 
@@ -350,23 +350,15 @@ showexpirations() {
 
 showurl() {
 	echo "Your ${2}paste can be seen here: $1"
-	[[ $XPASTE ]] && x_paste "$1"
-	[[ $XCLIPPASTE ]] && x_clip_paste "$1"
+	[[ $XPASTE ]] && x_paste "$1" primary
+	[[ $XCLIPPASTE ]] && x_paste "$1" clipboard
 }
 
 x_paste() {
 	if [[ -x $(type -P xclip) ]]; then
-		echo -n "$*" | xclip -selection primary -loops 10 &>/dev/null || die "xclip failed."
+		echo -n "$1" | xclip -selection $2 -loops 10 &>/dev/null || die "xclip failed."
 	else
 		noxclip paste "write to"
-	fi
-}
-
-x_clip_paste() {
-	if [[ -x $(type -P xclip) ]]; then
-		echo -n "$*" | xclip -selection clipboard -loops 10 &>/dev/null || die "xclip failed."
-	else
-		noxclip clip_paste "write to"
 	fi
 }
 
@@ -556,11 +548,10 @@ load_configs() {
 		for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
 			if [[ -f $f ]]; then
 				if [[ -z $deprecated ]]; then
-					echo "The config files for wgetpaste have changed to *.conf." >&2
-					echo >&2
+					echo "The config files for wgetpaste have changed to *.conf.$N" >&2
 					deprecated=0
 				fi
-				echo "Please move ${f} to ${f%.bash}.conf" >&2
+				echo "Please move ${f} to ${f/%.bash/.conf}" >&2
 				source "$f" || die "Failed to source $f"
 			fi
 		done
