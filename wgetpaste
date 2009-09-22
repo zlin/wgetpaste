@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # A Script that automates pasting to a number of pastebin services
 # relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami/tee) and wget
-# Copyright (c) 2007 Bo Ørsted Andresen <bo.andresen@zlin.dk>
-# Distributed as-is. With no warranties.
+# Copyright (c) 2007-2009 Bo Ørsted Andresen <bo.andresen@zlin.dk>
+# Distributed in the public domain. Do with it whatever you want.
 
 VERSION="2.13"
 
