@@ -14,7 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca dpaste rafb osl"
+SERVICES="ca dpaste osl"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
@@ -24,14 +24,6 @@ ENGINE_dpaste=dpaste
 URL_dpaste="http://dpaste.com/"
 DESCRIPTION_SIZE_dpaste="50"
 DEFAULT_EXPIRATION_dpaste="30 days"
-# rafb
-ENGINE_rafb=rafb
-URL_rafb="http://rafb.net/paste/ paste.php"
-SIZE_rafb="800000 800%kB"
-LINES_rafb=10000
-TOOFAST_rafb="http://rafb.net/p/toofast.html You must wait at least 10 seconds between each paste! Try again in 10 seconds."
-TOOBIG_rafb="http://rafb.net/p/toobig.html The paste is too big. Try another service or paste smaller chunks of data."
-EXPIRATION_INFO_rafb="Pastes on rafb: http://rafb.net/paste/ expire after 24 hours.$N"
 # osl
 ENGINE_osl=osl
 URL_osl="http://pastebin.osuosl.org/ pastebin.php"
@@ -60,9 +52,6 @@ EXPIRATIONS_dpaste="30%days 30%days%after%last%view"
 EXPIRATION_VALUES_dpaste="off on"
 POST_dpaste="submit=Paste+it poster title language hold % content"
 REGEX_RAW_dpaste='s|^\(http://[^/]*/\)[^0-9]*\([0-9]*/\)$|\1\2plain/|'
-# rafb
-LANGUAGES_rafb="C C89 C99 C++ C# Java Pascal Perl PHP PL/I Python Ruby SQL VB Plain%Text"
-POST_rafb="% nick desc lang % cvt_tabs text"
 # osl
 LANGUAGES_osl="Plain%Text ActionScript Ada Apache%Log%File AppleScript Assembly%(NASM) \
 ASP Bash C C%for%Macs CAD%DCL CAD%Lisp C++ C# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
