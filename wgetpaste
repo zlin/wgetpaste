@@ -29,7 +29,7 @@ ENGINE_osl=osl
 URL_osl="http://pastebin.osuosl.org/ pastebin.php"
 # tinyurl
 ENGINE_tinyurl=tinyurl
-URL_tinyurl="http://tinyurl.com/ create.php"
+URL_tinyurl="http://tinyurl.com/ api-create.php"
 
 ### engines
 # ca
@@ -66,9 +66,6 @@ EXPIRATIONS_osl="Never 1%day 1%month"
 EXPIRATION_VALUES_osl="f d m"
 POST_osl="paste=Send poster % format expiry % code2"
 REGEX_RAW_osl='s|^\(http://[^/]*/\)\([0-9]*\)$|\1pastebin.php?dl=\2|'
-# tinyurl
-POST_tinyurl="submit=Make+TinyURL! % % % % % url"
-REGEX_URL_tinyurl='s|^<input type=hidden name=tinyurl value="\?\([^"]*\)"\?>$|\1|p'
 
 ### errors
 die() {
@@ -525,7 +522,10 @@ while [[ -n $1 ]]; do
 		TEE=0
 		;;
 		-u | --tinyurl )
+		requiredarg "$@"
 		SERVICE=tinyurl
+		SOURCE="url"
+		INPUTURL="$1"
 		;;
 		-v | --verbose )
 		VERBOSE=0
@@ -656,6 +656,9 @@ fi
 
 # read input
 case "$SOURCE" in
+	url )
+	INPUT="${INPUTURL}"
+	;;
 	command )
 	for c in "${COMMANDS[@]}"; do
 		if [[ $TEE ]]; then
@@ -731,6 +734,9 @@ warnings >&2
 # set recipient
 RECIPIENT=$(getrecipient RAW)
 
+if [[ $SERVICE == tinyurl ]]; then
+	URL=$(LC_ALL=C wget -qO - "$RECIPIENT?url=$INPUT")
+else
 	# create temp file (wget is much more reliable reading
 	# large input via --post-file rather than --post-data)
 	[[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
@@ -762,6 +768,7 @@ RECIPIENT=$(getrecipient RAW)
 
 	# get the url
 	URL=$(geturl "$OUTPUT")
+fi
 
 # verify that the pastebin service did not return a known error url such as toofast.html from rafb
 verifyurl
