@@ -731,36 +731,37 @@ warnings >&2
 # set recipient
 RECIPIENT=$(getrecipient RAW)
 
-# create temp file (wget is much more reliable reading large input via --post-file rather than --post-data)
-[[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
-if [[ -f $TMPF ]]; then
-	postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
-	WGETARGS="--post-file=$TMPF"
-else
-	# fall back to using --post-data if the temporary file could not be created
-	# TABs and new lines need to be escaped for wget to interpret it as one string
-	WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
-fi
-
-# paste it
-WGETARGS="--tries=5 --timeout=60 $WGETARGS"
-if geturl needstdout || [[ $DEBUG || ! -w /dev/null ]]; then
-	OUTPUT=$(LC_ALL=C wget -O - $WGETARGS $RECIPIENT 2>&1)
-else
-	OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS $RECIPIENT 2>&1)
-fi
-
-# clean temporary file if it was created
-if [[ -f $TMPF ]]; then
-	if [[ $DEBUG ]]; then
-		echo "Left temporary file: \"$TMPF\" alone for debugging purposes."
+	# create temp file (wget is much more reliable reading
+	# large input via --post-file rather than --post-data)
+	[[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
+	if [[ -f $TMPF ]]; then
+		postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
+		WGETARGS="--post-file=$TMPF"
 	else
-		rm "$TMPF" || echo "Failed to remove temporary file: \"$TMPF\"." >&2
+		# fall back to using --post-data if the temporary file could not be created
+		# TABs and new lines need to be escaped for wget to interpret it as one string
+		WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 	fi
-fi
 
-# get the url
-URL=$(geturl "$OUTPUT")
+	# paste it
+	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
+	if geturl needstdout || [[ $DEBUG || ! -w /dev/null ]]; then
+		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS $RECIPIENT 2>&1)
+	else
+		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS $RECIPIENT 2>&1)
+	fi
+
+	# clean temporary file if it was created
+	if [[ -f $TMPF ]]; then
+		if [[ $DEBUG ]]; then
+			echo "Left temporary file: \"$TMPF\" alone for debugging purposes."
+		else
+			rm "$TMPF" || echo "Failed to remove temporary file: \"$TMPF\"." >&2
+		fi
+	fi
+
+	# get the url
+	URL=$(geturl "$OUTPUT")
 
 # verify that the pastebin service did not return a known error url such as toofast.html from rafb
 verifyurl
