@@ -14,11 +14,15 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca dpaste osl"
+SERVICES="ca codepad dpaste osl"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
 SIZE_ca="1024000 1%MB"
+# codepad
+ENGINE_codepad=codepad
+URL_codepad="http://codepad.org/"
+SIZE_codepad="64000 64%KB"
 # dpaste
 ENGINE_dpaste=dpaste
 URL_dpaste="http://dpaste.com/"
@@ -44,6 +48,10 @@ EXPIRATIONS_ca="Never 5%minutes 10%minutes 15%minutes 30%minutes 45%minutes 1%ho
 POST_ca="s=Submit+Post name description type expiry % content"
 REGEX_URL_ca='s|^.*content="[0-9]*;\(http://[^/]*/[0-9]*\)".*$|\1|p'
 REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
+# codepad
+LANGUAGES_codepad="C C++ D Haskell Lua OCaml PHP Perl Plain%Text Python Ruby Scheme Tcl"
+POST_codepad="submit % % lang % % code"
+REGEX_URL_codepad='s|^--.*\(http://codepad.org/[^ ]\+\)|\1|p'
 # dpaste
 LANGUAGES_dpaste="Plain%Text Apache%Config Bash CSS Diff Django%Template/HTML Haskell JavaScript \
 Python Python%Interactive/Traceback Ruby Ruby%HTML%(ERB) SQL XML"
