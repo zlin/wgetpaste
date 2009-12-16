@@ -728,6 +728,9 @@ SIZE=$(wc -c <<< "$INPUT")
 LINES=$(wc -l <<< "$INPUT")
 warnings >&2
 
+# set recipient
+RECIPIENT=$(getrecipient RAW)
+
 # create temp file (wget is much more reliable reading large input via --post-file rather than --post-data)
 [[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
 if [[ -f $TMPF ]]; then
@@ -738,9 +741,6 @@ else
 	# TABs and new lines need to be escaped for wget to interpret it as one string
 	WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 fi
-
-# set recipient
-RECIPIENT=$(getrecipient RAW)
 
 # paste it
 WGETARGS="--tries=5 --timeout=60 $WGETARGS"
