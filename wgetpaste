@@ -22,6 +22,7 @@ SIZE_ca="1024000 1%MB"
 # dpaste
 ENGINE_dpaste=dpaste
 URL_dpaste="http://dpaste.com/"
+SIZE_dpaste="25000 25%kB"
 DESCRIPTION_SIZE_dpaste="50"
 DEFAULT_EXPIRATION_dpaste="30 days"
 # osl
