@@ -38,6 +38,7 @@ URL_pocoo="http://paste.pocoo.org/"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
+REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
 
 ### engines
 # ca
