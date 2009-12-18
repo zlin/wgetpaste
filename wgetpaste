@@ -14,7 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca codepad dpaste osl"
+SERVICES="ca codepad dpaste osl pocoo"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
@@ -32,6 +32,9 @@ DEFAULT_EXPIRATION_dpaste="30 days"
 # osl
 ENGINE_osl=osl
 URL_osl="http://pastebin.osuosl.org/ pastebin.php"
+# pocoo
+ENGINE_pocoo=pocoo
+URL_pocoo="http://paste.pocoo.org/"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -75,6 +78,21 @@ EXPIRATIONS_osl="Never 1%day 1%month"
 EXPIRATION_VALUES_osl="f d m"
 POST_osl="paste=Send poster % format expiry % code2"
 REGEX_RAW_osl='s|^\(http://[^/]*/\)\([0-9]*\)$|\1pastebin.php?dl=\2|'
+# pocoo
+LANGUAGES_pocoo="Apache%Config%(.htaccess) Bash Batch%(.bat) Boo C C# C++ Clojure Creole%Wiki CSS \
+CSV D Debian%control-files Django%/%Jinja%Templates Dylan Erlang eRuby%/%rhtml GAS GCC%Messages \
+Genshi%Templates Gettext%catalogs GL%Shader%language Haskell HTML INI%File Interactive%Ruby IO \
+IRC%Logs Java javac%Messages JavaScript JSP Lighttpd Literate%Haskell LLVM Lua Mako%Templates Matlab \
+Matlab%Session MiniD Multi-File Myghty%Templates MySQL Nasm Nginx Object-Pascal OCaml Perl PHP \
+PHP%(inline) Povray Python Python%Console%Sessions Python%Tracebacks reStructuredText Ruby Scala \
+Scheme Smalltalk Smarty sources.list SQL SquidConf TeX%/%LaTeX Plain%Text Unified%Diff Vim XML XSLT YAML"
+LANGUAGE_VALUES_pocoo="apache bash bat boo c csharp cpp clojure creole css csv d control html+django \
+dylan erlang rhtml gas gcc-messages html+genshi gettext glsl haskell html ini irb io irc java \
+javac-messages js jsp lighttpd literate-haskell llvm lua html+mako matlab matlabsession minid multi \
+html+myghty mysql nasm nginx objectpascal ocaml perl html+php php povray python pycon pytb rst ruby \
+scala scheme smalltalk smarty sourceslist sql squidconf tex text diff vim xml xslt yaml"
+POST_pocoo="submit=Paste! % % language % % code"
+REGEX_RAW_pocoo='s|^\(http://[^/]*/\)show\(/[0-9]*/\)$|\1raw\2|'
 
 ### errors
 die() {
@@ -588,7 +606,7 @@ load_configs() {
 load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
-DEFAULT_SERVICE=${DEFAULT_SERVICE:-dpaste}
+DEFAULT_SERVICE=${DEFAULT_SERVICE:-pocoo}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
