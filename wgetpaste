@@ -552,7 +552,7 @@ while [[ -n $1 ]]; do
 		requiredarg "$@"
 		SERVICE=tinyurl
 		SOURCE="url"
-		INPUTURL="$1"
+		INPUTURL="$2"
 		;;
 		-v | --verbose )
 		VERBOSE=0
