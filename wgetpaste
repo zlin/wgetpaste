@@ -55,6 +55,7 @@ REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
 LANGUAGES_codepad="C C++ D Haskell Lua OCaml PHP Perl Plain%Text Python Ruby Scheme Tcl"
 POST_codepad="submit % % lang % % code"
 REGEX_URL_codepad='s|^--.*\(http://codepad.org/[^ ]\+\)|\1|p'
+REGEX_RAW_codepad='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2/raw.rb|'
 # dpaste
 LANGUAGES_dpaste="Plain%Text Apache%Config Bash CSS Diff Django%Template/HTML Haskell JavaScript \
 Python Python%Interactive/Traceback Ruby Ruby%HTML%(ERB) SQL XML"
