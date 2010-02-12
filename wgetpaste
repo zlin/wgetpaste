@@ -659,7 +659,7 @@ load_configs() {
 					echo "The config files for wgetpaste have changed to *.conf.$N" >&2
 					deprecated=0
 				fi
-				echo "Please move ${f} to ${f/%.bash/.conf}" >&2
+				echo "Please move ${f} to ${f%.bash}.conf" >&2
 				source "$f" || die "Failed to source $f"
 			fi
 		done
