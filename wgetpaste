@@ -306,9 +306,9 @@ Options:
     -g, --ignore-configs          ignore /etc/wgetpaste.conf, ~/.wgetpaste.conf etc.
         --version                 show version information
 
-Defaults (DEFAULT_{NICK,SERVICE,LANGUAGE,EXPIRATION}[_\${SERVICE}]) can be overridden
-globally in /etc/wgetpaste.conf or /etc/wgetpaste.d/*.conf or per user in any of
-~/.wgetpaste.conf or ~/.wgetpaste.d/*.conf.
+Defaults (DEFAULT_{NICK,LANGUAGE,EXPIRATION}[_\${SERVICE}] and DEFAULT_SERVICE)
+can be overridden globally in /etc/wgetpaste.conf or /etc/wgetpaste.d/*.conf or
+per user in any of ~/.wgetpaste.conf or ~/.wgetpaste.d/*.conf.
 EOF
 }
 
