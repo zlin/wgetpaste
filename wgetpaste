@@ -618,7 +618,7 @@ default="DEFAULT_NICK_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_NICK=${!defau
 default="DEFAULT_LANGUAGE_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_LANGUAGE=${!default}
 default="DEFAULT_EXPIRATION_$SERVICE" && [[ -n ${!default} ]] && DEFAULT_EXPIRATION=${!default}
 NICK=${NICK:-$(escape "${DEFAULT_NICK}")}
-[[ -z $SOURCE ]] && SOURCE="stdin" && FILES[${#FILES[*]}]="/dev/stdin"
+[[ -z $SOURCE ]] && SOURCE="stdin"
 CVT_TABS=No
 
 INFO_COMMAND=${INFO_COMMAND:-"emerge --info"}
@@ -711,7 +711,14 @@ case "$SOURCE" in
 		INPUT="$(x_cut)"
 	fi
 	;;
-	files | stdin )
+	stdin )
+		if [[ $TEE ]]; then
+			tee "$TMPF"
+		else
+			INPUT="$(cat)"
+		fi
+	;;
+	files )
 	if [[ ${#FILES[@]} -gt 1 ]]; then
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
