@@ -4,7 +4,7 @@
 # Copyright (c) 2007-2009 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed in the public domain. Do with it whatever you want.
 
-VERSION="2.18"
+VERSION="2.19"
 
 # don't inherit LANGUAGE from the env
 unset LANGUAGE
