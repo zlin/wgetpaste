@@ -14,7 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca codepad dpaste gists poundpython osl"
+SERVICES="ca codepad dpaste gists poundpython"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
@@ -35,9 +35,6 @@ URL_gists="https://api.github.com/gists"
 # poundpython
 ENGINE_poundpython=lodgeit
 URL_poundpython="http://paste.pound-python.org/"
-# osl
-ENGINE_osl=osl
-URL_osl="http://pastebin.osuosl.org/ pastebin.php"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -118,20 +115,6 @@ html+myghty mysql nasm nginx objectpascal ocaml perl html+php php povray python 
 scala scheme smalltalk smarty sourceslist sql squidconf tex text diff vim xml xslt yaml"
 POST_lodgeit="submit=Paste! % % language % % code"
 REGEX_RAW_lodgeit='s|^\(http://[^/]*/\)show\(/[0-9]*/\)$|\1raw\2|'
-# osl
-LANGUAGES_osl="Plain%Text ActionScript Ada Apache%Log%File AppleScript Assembly%(NASM) \
-ASP Bash C C%for%Macs CAD%DCL CAD%Lisp C++ C# ColdFusion CSS D Delphi Diff DOS Eiffel Fortran \
-FreeBasic Game%Maker HTML%4.0%Strict INI%file Java Javascript Lisp Lua MatLab Microprocessor%ASM \
-MySQL NullSoft%Installer Objective%C OCaml Openoffice.org%BASIC Oracle%8 Pascal Perl PHP Python \
-QBasic Robots.txt Ruby Scheme Smarty SQL TCL VB VB.NET VisualFoxPro XML"
-LANGUAGE_VALUES_osl="text actionscript ada apache applescript asm asp bash c c_mac caddcl \
-cadlisp cpp csharp cfm css d delphi diff dos eiffel fortran freebasic gml html4strict ini java \
-javascript lisp lua matlab mpasm mysql nsis objc ocaml oobas oracle8 pascal perl php python \
-qbasic robots ruby scheme smarty sql tcl vb vbnet visualfoxpro xml"
-EXPIRATIONS_osl="Never 1%day 1%month"
-EXPIRATION_VALUES_osl="f d m"
-POST_osl="paste=Send poster % format expiry % code2"
-REGEX_RAW_osl='s|^\(http://[^/]*/\)\([0-9]*\)$|\1pastebin.php?dl=\2|'
 
 ### errors
 die() {
