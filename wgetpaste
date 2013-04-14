@@ -101,18 +101,41 @@ json_gists() {
     echo "{\"description\":\"${description}\",\"public\":\"true\",\"files\":{\"${description//\/}.${language}\":{\"content\":\"${content}\"}}"
 }
 # lodgeit
-LANGUAGES_lodgeit="Apache%Config%(.htaccess) Bash Batch%(.bat) Boo C C# C++ Clojure Creole%Wiki CSS \
-CSV D Debian%control-files Django%/%Jinja%Templates Dylan Erlang eRuby%/%rhtml GAS GCC%Messages \
-Genshi%Templates Gettext%catalogs GL%Shader%language Haskell HTML INI%File Interactive%Ruby IO \
-IRC%Logs Java javac%Messages JavaScript JSP Lighttpd Literate%Haskell LLVM Lua Mako%Templates Matlab \
-Matlab%Session MiniD Multi-File Myghty%Templates MySQL Nasm Nginx Object-Pascal OCaml Perl PHP \
-PHP%(inline) Povray Python Python%Console%Sessions Python%Tracebacks reStructuredText Ruby Scala \
-Scheme Smalltalk Smarty sources.list SQL SquidConf TeX%/%LaTeX Plain%Text Unified%Diff Vim XML XSLT YAML"
-LANGUAGE_VALUES_lodgeit="apache bash bat boo c csharp cpp clojure creole css csv d control html+django \
-dylan erlang rhtml gas gcc-messages html+genshi gettext glsl haskell html ini irb io irc java \
-javac-messages js jsp lighttpd literate-haskell llvm lua html+mako matlab matlabsession minid multi \
-html+myghty mysql nasm nginx objectpascal ocaml perl html+php php povray python pycon pytb rst ruby \
-scala scheme smalltalk smarty sourceslist sql squidconf tex text diff vim xml xslt yaml"
+LANGUAGES_lodgeit="ABAP ActionScript ActionScript%3 Ada ANTLR ANTLR%With%ActionScript%Target \
+ANTLR%With%CPP%Target ANTLR%With%C#%Target ANTLR%With%Java%Target ANTLR%With%ObjectiveC%Target \
+ANTLR%With%Perl%Target ANTLR%With%Python%Target ANTLR%With%Ruby%Target ApacheConf AppleScript \
+aspx-cs aspx-vb Asymptote Bash Bash%Session Batchfile BBCode Befunge Boo Brainfuck C C# C++ \
+cfstatement Cheetah Clojure CMake c-objdump CoffeeScript Common%Lisp cpp-objdump Creole%Wiki CSS \
+CSS+Django/Jinja CSS+Genshi%Text CSS+Mako CSS+Myghty CSS+PHP CSS+Ruby CSS+Smarty CSV Cython D \
+Darcs%Patch Debian%Control%file Debian%Sourcelist Delphi Django/Jinja d-objdump Dylan Embedded%Ragel \
+ERB Erlang Erlang%erl%session Evoque Felix Fortran GAS GCC%Messages Genshi Genshi%Text \
+Gettext%Catalog Gherkin GLSL Gnuplot Go Groff Haml Haskell haXe HTML HTML+Cheetah HTML+Django/Jinja \
+HTML+Evoque HTML+Genshi HTML+Mako HTML+Myghty HTML+PHP HTML+Smarty INI Io IRC%logs Java \
+javac%Messages JavaScript JavaScript+Cheetah JavaScript+Django/Jinja JavaScript+Genshi%Text \
+JavaScript+Mako JavaScript+Myghty JavaScript+PHP JavaScript+Ruby JavaScript+Smarty Java%Server%Page \
+Lighttpd%configuration%file Literate%Haskell LLVM Logtalk Lua Makefile Mako Matlab Matlab%session \
+MiniD Modelica Modula-2 MoinMoin/Trac%Wiki%markup MOOCode Multi-File MuPAD MXML Myghty MySQL NASM \
+Newspeak Nginx%configuration%file NumPy objdump Objective-C Objective-J OCaml Ooc Perl PHP \
+Plain%Text POVRay Prolog Python Python%3 Python%3.0%Traceback Python%console%session \
+Python%Traceback Ragel Ragel%in%C%Host Ragel%in%CPP%Host Ragel%in%D%Host Ragel%in%Java%Host \
+Ragel%in%Objective%C%Host Ragel%in%Ruby%Host Raw%token%data RConsole REBOL Redcode reStructuredText \
+RHTML Ruby Ruby%irb%session S Sass Scala Scheme Smalltalk Smarty SQL sqlite3con SquidConf Tcl Tcsh \
+TeX Unified%Diff Vala VB.net VimL XML XML+Cheetah XML+Django/Jinja XML+Evoque XML+Mako XML+Myghty \
+XML+PHP XML+Ruby XML+Smarty XSLT YAML"
+LANGUAGE_VALUES_lodgeit="abap as as3 ada antlr antlr-as antlr-cpp antlr-csharp antlr-java antlr-objc \
+antlr-perl antlr-python antlr-ruby apacheconf applescript aspx-cs aspx-vb asy bash console bat \
+bbcode befunge boo brainfuck c csharp cpp cfs cheetah clojure cmake c-objdump coffee-script \
+common-lisp cpp-objdump creole css css+django css+genshitext css+mako css+myghty css+php css+erb \
+css+smarty csv cython d dpatch control sourceslist delphi django d-objdump dylan ragel-em erb erlang \
+erl evoque felix fortran gas gcc-messages genshi genshitext pot Cucumber glsl gnuplot go groff haml \
+haskell hx html html+cheetah html+django html+evoque html+genshi html+mako html+myghty html+php \
+html+smarty ini io irc java javac-messages js js+cheetah js+django js+genshitext js+mako js+myghty \
+js+php js+erb js+smarty jsp lighty lhs llvm logtalk lua make mako matlab matlabsession minid \
+modelica modula2 trac-wiki moocode multi mupad mxml myghty mysql nasm newspeak nginx numpy objdump \
+objective-c objective-j ocaml ooc perl php text pov prolog python python3 py3tb pycon pytb ragel \
+ragel-c ragel-cpp ragel-d ragel-java ragel-objc ragel-ruby raw rconsole rebol redcode rst rhtml rb \
+rbcon splus sass scala scheme smalltalk smarty sql sqlite3 squidconf tcl tcsh tex diff vala vb.net \
+vim xml xml+cheetah xml+django xml+evoque xml+mako xml+myghty xml+php xml+erb xml+smarty xslt yaml"
 POST_lodgeit="submit=Paste! % % language % % code"
 REGEX_RAW_lodgeit='s|^\(http://[^/]*/\)show\(/[0-9]*/\)$|\1raw\2|'
 
