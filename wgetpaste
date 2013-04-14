@@ -14,7 +14,10 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca codepad dpaste gists poundpython"
+SERVICES="bpaste ca codepad dpaste gists poundpython"
+# bpaste
+ENGINE_bpaste=lodgeit
+URL_bpaste="http://bpaste.net/"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
@@ -657,7 +660,7 @@ load_configs() {
 load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
-DEFAULT_SERVICE=${DEFAULT_SERVICE:-gists}
+DEFAULT_SERVICE=${DEFAULT_SERVICE:-bpaste}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
