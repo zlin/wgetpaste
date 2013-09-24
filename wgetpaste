@@ -847,12 +847,19 @@ else
 		WGETARGS="--post-data=$(postdata | sed -e 's|$|%0a|g' -e 's|\t|%09|g' | tr -d '\n')"
 	fi
 
+	header="HEADER_$SERVICE"
+	if [[ -n "${!header}" ]]; then
+		WGETEXTRAHEADER="--header=${!header}"
+	else
+		WGETEXTRAHEADER=""
+	fi
+
 	# paste it
 	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
 	if geturl needstdout || [[ $DEBUG || ! -w /dev/null ]]; then
-		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS "$WGETEXTRAHEADER" $RECIPIENT 2>&1)
 	else
-		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS "$WGETEXTRAHEADER" $RECIPIENT 2>&1)
 	fi
 
 	# clean temporary file if it was created
