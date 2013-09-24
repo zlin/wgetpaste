@@ -95,7 +95,7 @@ mak mako md matlab mxt minid duby moo mu myt n nim nu numpy objdump m j ml ooc
 opa cl p parrot pasm pir pl aw txt ps1 pl pp pd py pytb r rkt raw r cw rst rhtml
 rb rs sage sass scala scm sci scss self sh st tpl sql sml sc tcl tcsh tea tex
 textile t twig vala v vhd vim vb xml xq xs yml"
-REGEX_URL_gists='s|^.*"html_url": "\([^"]\+\)".*$|\1|p'
+REGEX_URL_gists='s|^.*"html_url": "\([^"]\+gist[^"]\+\)".*$|\1|p'
 REGEX_RAW_gists='s|^\(https://\)\(gist\)\(.github.com/\)\(.*\)$|\1raw\3\2/\4|'
 escape_description_gists() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_gists() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
