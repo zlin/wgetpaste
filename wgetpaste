@@ -357,6 +357,10 @@ Options:
 Defaults (DEFAULT_{NICK,LANGUAGE,EXPIRATION}[_\${SERVICE}] and DEFAULT_SERVICE)
 can be overridden globally in /etc/wgetpaste.conf or /etc/wgetpaste.d/*.conf or
 per user in any of ~/.wgetpaste.conf or ~/.wgetpaste.d/*.conf.
+
+An additional http header can be passed by setting HEADER_\${SERVICE} in any of the
+configuration files mentioned above. For example, authenticating with github gist:
+HEADER_gists="Authorization: token 1234abc56789..."
 EOF
 }
 
