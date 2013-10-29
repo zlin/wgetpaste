@@ -172,6 +172,15 @@ EOF
 
 ### conversions
 
+# make comparison of specified languages and expirations case-insensitive
+tolower() {
+	tr '[:upper:]' '[:lower:]' <<< "$*"
+}
+
+compare_tolower() {
+	[[ $(tolower "$1") == $(tolower "$2") ]]
+}
+
 # escape % (used for escaping), & (used as separator in POST data), + (used as space in POST data), space and ;
 escape() {
 	sed -e 's|%|%25|g' -e 's|&|%26|g' -e 's|+|%2b|g' -e 's|;|%3b|g' -e 's| |+|g' <<< "$*" || die "sed failed"
@@ -194,7 +203,7 @@ converttoraw() {
 ### verification
 verifyservice() {
 	for s in $SERVICES; do
-		[[ $s == $* ]] && return 0
+		compare_tolower "$(tolower "$s")" "$(tolower "$*")" && return 0
 	done
 	echo "\"$*\" is not a supported service.$N" >&2
 	showservices >&2
@@ -209,7 +218,7 @@ verifylanguage() {
 	if [[ -n ${!lang} ]]; then
 		((i=0))
 		for l in ${!lang}; do
-			if [[ $LANGUAGE == ${l//\%/ } ]]; then
+			if compare_tolower "$LANGUAGE" "${l//\%/ }"; then
 				if [[ -n ${!count} ]]; then
 					((LANGUAGE=i+1))
 				elif [[ -n ${!values} ]]; then
@@ -246,7 +255,7 @@ verifyexpiration() {
 	if [[ -n ${!expiration} ]]; then
 		((i=0))
 		for e in ${!expiration}; do
-			if [[ ${EXPIRATION} == ${e//\%/ } ]]; then
+			if compare_tolower "${EXPIRATION}" "${e//\%/ }"; then
 				if [[ -n ${!count} ]]; then
 					((EXPIRATION=i+1))
 				elif [[ -n {!values} ]]; then
