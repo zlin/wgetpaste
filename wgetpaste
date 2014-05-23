@@ -203,7 +203,7 @@ converttoraw() {
 ### verification
 verifyservice() {
 	for s in $SERVICES; do
-		compare_tolower "$(tolower "$s")" "$(tolower "$*")" && return 0
+		compare_tolower "$s" "$*" && return 0
 	done
 	echo "\"$*\" is not a supported service.$N" >&2
 	showservices >&2
