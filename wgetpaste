@@ -142,7 +142,7 @@ ragel-c ragel-cpp ragel-d ragel-java ragel-objc ragel-ruby raw rconsole rebol re
 rbcon splus sass scala scheme smalltalk smarty sql sqlite3 squidconf tcl tcsh tex diff vala vb.net \
 vim xml xml+cheetah xml+django xml+evoque xml+mako xml+myghty xml+php xml+erb xml+smarty xslt yaml"
 POST_lodgeit="submit=Paste! % % language % % code"
-REGEX_RAW_lodgeit='s|^\(http://[^/]*/\)show\(/[0-9]*/\)$|\1raw\2|'
+REGEX_RAW_lodgeit='s|^\(http://[^/]*/\)show\(/[[:alnum:]]*/\)$|\1raw\2|'
 
 ### errors
 die() {
