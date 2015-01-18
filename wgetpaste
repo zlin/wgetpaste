@@ -445,7 +445,8 @@ showexpirations() {
 }
 
 showurl() {
-	echo "Your ${2}paste can be seen here: $1"
+	echo -n "Your ${2}paste can be seen here: " >&2
+	echo "$1"
 	[[ $XPASTE ]] && x_paste "$1" primary
 	[[ $XCLIPPASTE ]] && x_paste "$1" clipboard
 }
