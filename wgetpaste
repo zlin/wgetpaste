@@ -14,10 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="bpaste ca codepad dpaste gists poundpython"
-# bpaste
-ENGINE_bpaste=lodgeit
-URL_bpaste="http://bpaste.net/"
+SERVICES="ca codepad dpaste gists poundpython"
 # ca
 ENGINE_ca=ca
 URL_ca="http://pastebin.ca/"
