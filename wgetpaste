@@ -14,11 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="ca codepad dpaste gists poundpython"
-# ca
-ENGINE_ca=ca
-URL_ca="http://pastebin.ca/"
-SIZE_ca="1024000 1%MB"
+SERVICES="codepad dpaste gists poundpython"
 # codepad
 ENGINE_codepad=codepad
 URL_codepad="http://codepad.org/"
@@ -41,17 +37,6 @@ URL_tinyurl="http://tinyurl.com/ api-create.php"
 REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
 
 ### engines
-# ca
-LANGUAGES_ca="Plain%Text Asterisk%Configuration C C++ PHP Perl Java VB C# Ruby Python Pascal \
-mIRC PL/I XML SQL Scheme ActionScript Ada Apache%Configuration Assembly%(NASM) ASP Bash CSS \
-Delphi HTML%4.0%Strict JavaScript LISP Lua Microprocessor%ASM Objective%C VB.NET"
-LANGUAGE_COUNT_ca=0
-EXPIRATIONS_ca="Never 5%minutes 10%minutes 15%minutes 30%minutes 45%minutes 1%hour 2%hours \
-4%hours 8%hours 12%hours 1%day 2%days 3%days 1%week 2%weeks 3%weeks 1%month 2%months \
-3%months 4%months 5%months 6%months 1%year"
-POST_ca="s=Submit+Post name description type expiry % content"
-REGEX_URL_ca='s|^.*content="[0-9]*;\(http://[^/]*/[0-9]*\)".*$|\1|p'
-REGEX_RAW_ca='s|^\(http://[^/]*/\)\([0-9]*\)$|\1raw/\2|'
 # codepad
 LANGUAGES_codepad="C C++ D Haskell Lua OCaml PHP Perl Plain%Text Python Ruby Scheme Tcl"
 POST_codepad="submit % % lang % % code"
