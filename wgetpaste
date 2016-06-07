@@ -14,7 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="codepad dpaste gists poundpython"
+SERVICES="codepad dpaste gists"
 # codepad
 ENGINE_codepad=codepad
 URL_codepad="http://codepad.org/"
@@ -28,9 +28,6 @@ DEFAULT_EXPIRATION_dpaste="30 days"
 # gists
 ENGINE_gists=gists
 URL_gists="https://api.github.com/gists"
-# poundpython
-ENGINE_poundpython=lodgeit
-URL_poundpython="http://paste.pound-python.org/"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -661,7 +658,7 @@ load_configs() {
 load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
-DEFAULT_SERVICE=${DEFAULT_SERVICE:-poundpython}
+DEFAULT_SERVICE=${DEFAULT_SERVICE:-gists}
 DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-Plain Text}
 DEFAULT_EXPIRATION=${DEFAULT_EXPIRATION:-1 month}
 SERVICE=${SERVICE:-${DEFAULT_SERVICE}}
