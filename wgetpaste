@@ -14,7 +14,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="codepad bpaste dpaste gists"
+SERVICES="codepad bpaste dpaste gists poundpython"
 # bpaste
 ENGINE_bpaste=pinnwand
 URL_bpaste="https://bpaste.net/"
@@ -33,6 +33,9 @@ DEFAULT_EXPIRATION_dpaste="30 days"
 # gists
 ENGINE_gists=gists
 URL_gists="https://api.github.com/gists"
+# poundpython
+ENGINE_poundpython=lodgeit
+URL_poundpython="https://paste.pound-python.org/"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -126,7 +129,7 @@ ragel-c ragel-cpp ragel-d ragel-java ragel-objc ragel-ruby raw rconsole rebol re
 rbcon splus sass scala scheme smalltalk smarty sql sqlite3 squidconf tcl tcsh tex diff vala vb.net \
 vim xml xml+cheetah xml+django xml+evoque xml+mako xml+myghty xml+php xml+erb xml+smarty xslt yaml"
 POST_lodgeit="submit=Paste! % % language % % code"
-REGEX_RAW_lodgeit='s|^\(http://[^/]*/\)show\(/[[:alnum:]]*/\)$|\1raw\2|'
+REGEX_RAW_lodgeit='s|^\(https\?://[^/]*/\)show\(/[[:alnum:]]*/\)$|\1raw\2|'
 # pinnwand
 LANGUAGES_pinnwand="ABAP ActionScript%3 ActionScript Ada ANTLR ANTLR%With%ActionScript%Target \
 ANTLR%With%CPP%Target ANTLR%With%C#%Target ANTLR%With%Java%Target ANTLR%With%ObjectiveC%Target \
@@ -558,7 +561,8 @@ geturl() {
 		sed -n -e "${!regex}" <<< "$*"
 	else
 		[[ needstdout = $1 ]] && return 1
-		sed -n -e 's|^.*Location: \(https\{0,1\}://[^ ]*\).*$|\1|p' <<< "$*"
+		sed -n -e 's|^.*Location: \(https\{0,1\}://[^ ]*\).*$|\1|p' <<< "$*"\
+		| tail -n1
 	fi
 }
 
