@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # A Script that automates pasting to a number of pastebin services
 # relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami/tee) and wget
-# Copyright (c) 2007-2009 Bo Ørsted Andresen <bo.andresen@zlin.dk>
+# Copyright (c) 2007-2016 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 # Distributed in the public domain. Do with it whatever you want.
 
 VERSION="2.27"
@@ -919,10 +919,10 @@ else
 
 	# paste it
 	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
-	if geturl needstdout || [[ $DEBUG || ! -w /dev/null ]]; then
-		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS "$WGETEXTRAHEADER" $RECIPIENT 2>&1)
+	if geturl needstdout ; then
+		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} $RECIPIENT 2>&1)
 	else
-		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS "$WGETEXTRAHEADER" $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} $RECIPIENT 2>&1)
 	fi
 
 	# clean temporary file if it was created
