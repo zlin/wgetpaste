@@ -561,9 +561,8 @@ geturl() {
 		sed -n -e "${!regex}" <<< "$*"
 	else
 		[[ needstdout = $1 ]] && return 1
-		sed -n -e 's|^.*Location: \(https\{0,1\}://[^ ]*\).*$|\1|p' <<< "$*"\
-		| tail -n1
-	fi
+		sed -n -e 's|^.*Location: \(https\{0,1\}://[^ ]*\).*$|\1|p' <<< "$*"
+	fi | tail -n1
 }
 
 ### read cli options
