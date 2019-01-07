@@ -562,7 +562,8 @@ geturl() {
 		sed -n -e "s|^.*Location: ${!location}|p" <<< "$*"
 	else
 		[[ needstdout = $1 ]] && return 1
-		sed -n -e 's|^.*Location: \(https\{0,1\}://[^ ]*\).*$|\1|p' <<< "$*"
+		svc_url=URL_$SERVICE
+		sed -n -e "s|^.*Location: \\(${!svc_url}[^ ]*\\).*$|\\1|p" <<< "$*"
 	fi | tail -n1
 }
 
