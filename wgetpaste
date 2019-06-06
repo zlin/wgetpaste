@@ -55,7 +55,7 @@ Ruby Rhtml Sql Xml"
 EXPIRATIONS_dpaste="30%days 30%days%after%last%view"
 EXPIRATION_VALUES_dpaste="off on"
 POST_dpaste="submit=Paste+it poster title language hold % content"
-REGEX_RAW_dpaste='s|^\(http://[^/]*/\)[^0-9]*\([0-9]*/\)$|\1\2plain/|'
+REGEX_RAW_dpaste='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2.txt|'
 # gists
 LANGUAGES_gists="ActionScript Ada Apex AppleScript Arc Arduino ASP Assembly
 Augeas AutoHotkey Batchfile Befunge BlitzMax Boo Brainfuck Bro C C# C++
