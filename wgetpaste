@@ -3,7 +3,7 @@
 # relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami/tee) and wget
 # Copyright (c) 2007-2016 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 
-VERSION="2.27"
+VERSION="2.29"
 
 # don't inherit LANGUAGE from the env
 unset LANGUAGE
