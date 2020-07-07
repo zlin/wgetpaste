@@ -428,6 +428,9 @@ HEADER_snippets="PRIVATE-TOKEN: 1234abc56789..."
 You can also set PUBLIC_gists='false' if you want to default to secret instead of
 public github gists. In the case of gitlab, you can set VISIBILITY_snippets= to
 'public', 'private' or 'internal'"
+
+To change your gitlab server, you can override the default API URL setting
+URL_snippets='https://gitlab.[server].com/api/[version]/snippets'
 EOF
 }
 
