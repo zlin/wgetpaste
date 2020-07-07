@@ -3,7 +3,7 @@
 # relying only on bash, sed, coreutils (mktemp/sort/tr/wc/whoami/tee) and wget
 # Copyright (c) 2007-2016 Bo Ørsted Andresen <bo.andresen@zlin.dk>
 
-VERSION="2.29"
+VERSION="2.30"
 
 # don't inherit LANGUAGE from the env
 unset LANGUAGE
@@ -13,7 +13,7 @@ E=$'\e'
 N=$'\n'
 
 ### services
-SERVICES="codepad bpaste dpaste gists"
+SERVICES="codepad bpaste dpaste gists snippets"
 # bpaste
 ENGINE_bpaste=pinnwand
 URL_bpaste="https://bpaste.net/"
@@ -36,6 +36,10 @@ URL_gists="https://api.github.com/gists"
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
 REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
+# snippets
+ENGINE_snippets=snippets
+URL_snippets="https://gitlab.com/api/v4/snippets"
+SECOND_HEADER_snippets="Content-Type: application/json"
 
 ### engines
 # codepad
@@ -87,6 +91,15 @@ json_gists() {
     local description="${1}" language="${2}" content="${3}"
     [[ "$language" = auto ]] && language="" || language=".$language"
     echo "{\"description\":\"${description}\",\"public\":\"${PUBLIC_gists}\",\"files\":{\"${description//\/}${language}\":{\"content\":\"${content}\"}}"
+}
+# snippets
+REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
+REGEX_RAW_snippets='s|.*"raw_url":"\([^"]*\)".*|\1|p'
+escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
+escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
+json_snippets() {
+    local description="${1}" content="${3}"
+	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
 }
 # lodgeit
 LANGUAGES_lodgeit="ABAP ActionScript ActionScript%3 Ada ANTLR ANTLR%With%ActionScript%Target \
@@ -409,10 +422,12 @@ per user in any of ~/.wgetpaste.conf or ~/.wgetpaste.d/*.conf.
 
 An additional http header can be passed by setting HEADER_\${SERVICE} in any of the
 configuration files mentioned above. For example, authenticating with github gist:
-HEADER_gists="Authorization: token 1234abc56789..."
+HEADER_gists="Authorization: token 1234abc56789...", or with gitlab snippets:
+HEADER_snippets="PRIVATE-TOKEN: 1234abc56789..."
 
-In the case of github gist you can also set PUBLIC_gists='false' if you want to
-default to secret instead of public gists.
+You can also set PUBLIC_gists='false' if you want to default to secret instead of
+public github gists. In the case of gitlab, you can set VISIBILITY_snippets= to
+'public', 'private' or 'internal'"
 EOF
 }
 
@@ -739,6 +754,9 @@ CVT_TABS=No
 PUBLIC_gists=${PUBLIC_gists:-true}
 [[ "${PUBLIC_gists}" = "true" || "${PUBLIC_gists}" = "false" ]] || die "Invalid setting for PUBLIC_gists. Can either be 'true' or 'false' not '${PUBLIC_gists}'"
 
+VISIBILITY_snippets=${VISIBILITY_snippets:-public}
+[[ "${VISIBILITY_snippets}" = "public" || "${VISIBILITY_snippets}" = "private" || "${VISIBILITY_snippets}" = "internal" ]] || die "Invalid setting for VISIBILITY_snippets. Can either be 'public', 'private' or 'internal' not '${VISIBILITY_snippets}'"
+
 INFO_COMMAND=${INFO_COMMAND:-"emerge --info"}
 INFO_ARGS=${INFO_ARGS:-"--ignore-default-opts"}
 
@@ -918,12 +936,19 @@ else
 		WGETEXTRAHEADER=""
 	fi
 
+	second_header="SECOND_HEADER_$SERVICE"
+	if [[ -n "${!second_header}" ]]; then
+		WGETSECONDEXTRAHEADER="--header=${!second_header}"
+	else
+		WGETSECONDEXTRAHEADER=""
+	fi
+
 	# paste it
 	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
 	if geturl needstdout ; then
-		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETSECONDEXTRAHEADER:+"$WGETSECONDEXTRAHEADER"} $RECIPIENT 2>&1)
 	else
-		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETSECONDEXTRAHEADER:+"$WGETSECONDEXTRAHEADER"} $RECIPIENT 2>&1)
 	fi
 
 	# clean temporary file if it was created
