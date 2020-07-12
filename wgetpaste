@@ -39,7 +39,7 @@ REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
 # snippets
 ENGINE_snippets=snippets
 URL_snippets="https://gitlab.com/api/v4/snippets"
-SECOND_HEADER_snippets="Content-Type: application/json"
+ADDITIONAL_HEADERS_snippets=("Content-Type: application/json")
 
 ### engines
 # codepad
@@ -939,19 +939,23 @@ else
 		WGETEXTRAHEADER=""
 	fi
 
-	second_header="SECOND_HEADER_$SERVICE"
-	if [[ -n "${!second_header}" ]]; then
-		WGETSECONDEXTRAHEADER="--header=${!second_header}"
-	else
-		WGETSECONDEXTRAHEADER=""
+	# build additional headers
+	additional_headers="ADDITIONAL_HEADERS_$SERVICE"
+	WGETADDITIONALHEADERS=()
+	if [[ -n "${!additional_headers}" ]]; then
+		tmp=$additional_headers[@]
+		for i in "${!tmp}"
+		do
+			WGETADDITIONALHEADERS+=("--header=${i}")
+		done
 	fi
 
 	# paste it
 	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
 	if geturl needstdout ; then
-		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETSECONDEXTRAHEADER:+"$WGETSECONDEXTRAHEADER"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
 	else
-		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETSECONDEXTRAHEADER:+"$WGETSECONDEXTRAHEADER"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
 	fi
 
 	# clean temporary file if it was created
