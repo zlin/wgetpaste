@@ -94,7 +94,7 @@ json_gists() {
 }
 # snippets
 REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
-REGEX_RAW_snippets='s|.*"raw_url":"\([^"]*\)".*|\1|p'
+REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
 escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
 json_snippets() {
