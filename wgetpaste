@@ -430,7 +430,7 @@ public github gists. In the case of gitlab, you can set VISIBILITY_snippets= to
 'public', 'private' or 'internal'"
 
 To change your gitlab server, you can override the default API URL setting
-URL_snippets='https://gitlab.[server].com/api/[version]/snippets'
+URL_snippets='https://gitlab.[server].com/api/v4/snippets'
 EOF
 }
 
