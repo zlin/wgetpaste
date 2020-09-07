@@ -585,6 +585,15 @@ geturl() {
 	fi | tail -n1
 }
 
+### check wget usability
+if command -v gnuwget >/dev/null 2>&1; then
+	wget=gnuwget
+elif command -v wget >/dev/null 2>&1 && wget --version 2>&1 | grep -q '^GNU Wget';then
+	wget=wget
+else
+	die "${0} requires GNU wget."
+fi
+
 ### read cli options
 
 # separate groups of short options. replace --foo=bar with --foo bar
@@ -919,7 +928,7 @@ warnings >&2
 RECIPIENT=$(getrecipient RAW)
 
 if [[ $SERVICE == tinyurl ]]; then
-	URL=$(LC_ALL=C wget -qO - "$RECIPIENT?url=$INPUT")
+	URL=$(LC_ALL=C ${wget} -qO - "$RECIPIENT?url=$INPUT")
 else
 	# create temp file (wget is much more reliable reading
 	# large input via --post-file rather than --post-data)
@@ -954,9 +963,9 @@ else
 	# paste it
 	WGETARGS="--tries=5 --timeout=60 $WGETARGS"
 	if geturl needstdout ; then
-		OUTPUT=$(LC_ALL=C wget -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C ${wget} -O - $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
 	else
-		OUTPUT=$(LC_ALL=C wget -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
+		OUTPUT=$(LC_ALL=C ${wget} -O /dev/null $WGETARGS ${WGETEXTRAHEADER:+"$WGETEXTRAHEADER"} ${WGETADDITIONALHEADERS[@]:+"${WGETADDITIONALHEADERS[@]}"} $RECIPIENT 2>&1)
 	fi
 
 	# clean temporary file if it was created
