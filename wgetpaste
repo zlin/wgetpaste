@@ -48,7 +48,7 @@ URL_0x0="http://0x0.st"
 SIZE_0x0="536870912 536%MB"
 # bpaste
 ENGINE_bpaste=pinnwand
-URL_bpaste="https://bpaste.net/"
+URL_bpaste="https://bpa.st/api/v1/paste"
 DEFAULT_EXPIRATION_bpaste="1week"
 DEFAULT_LANGUAGE_bpaste="text"
 # codepad
@@ -284,11 +284,14 @@ tcl tcsh tea tex text text treetop ts urbiscript vala vb.net velocity verilog vg
 xml+cheetah xml+django xml+evoque xml+lasso xml+mako xml+myghty xml+php xml+erb xml+smarty \
 xml+velocity xml xquery xslt xtend yaml"
 EXPIRATIONS_pinnwand="1day 1week 1month never"
+REGEX_URL_pinnwand='s|^.*"link": "\([^"]\+bpa.st[^"]\+\)".*$|\1|p'
+REGEX_RAW_pinnwand='s|^\(https://bpa.st\)\(/.*\)$|\1/raw\2|'
+escape_description_pinnwand() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
+escape_input_pinnwand() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
 POST_pinnwand() {
-	POST_generic "submit=Paste! % % lexer expiry % code" "$1" "$2" "$3" "$4" "$5" "$6"
+    local description="${2}" content="${6}"
+	echo "{\"expiry\": \"${DEFAULT_EXPIRATION_bpaste}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${DEFAULT_LANGUAGE_bpaste}\", \"content\": \"${content}\"} ] }"
 }
-REGEX_LOC_pinnwand="\(/show/[^ ]*\).*$|https://bpaste.net\1"
-REGEX_RAW_pinnwand='s|^\(https\?://[^/]*/\)show\(/[^ ]*/\?\)$|\1raw\2|'
 # snippets
 REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
 REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
