@@ -198,8 +198,8 @@ REGEX_RAW_pinnwand='s|^\(https://bpa.st\)\(/.*\)$|\1/raw\2|'
 escape_description_pinnwand() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_pinnwand() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
 json_pinnwand() {
-    local description="${1}" content="${3}"
-	echo "{\"expiry\": \"${DEFAULT_EXPIRATION_bpaste}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${DEFAULT_LANGUAGE_bpaste}\", \"content\": \"${content}\"} ] }"
+    local description="${1}" language="${2}" content="${3}"
+	echo "{\"expiry\": \"${DEFAULT_EXPIRATION_bpaste}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${language}\", \"content\": \"${content}\"} ] }"
 }
 
 ### errors
