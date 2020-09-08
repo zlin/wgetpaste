@@ -198,8 +198,8 @@ REGEX_RAW_pinnwand='s|^\(https://bpa.st\)\(/.*\)$|\1/raw\2|'
 escape_description_pinnwand() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_pinnwand() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
 json_pinnwand() {
-    local description="${1}" language="${2}" content="${3}"
-	echo "{\"expiry\": \"${DEFAULT_EXPIRATION_bpaste}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${language}\", \"content\": \"${content}\"} ] }"
+    local description="${1}" language="${2}" content="${3}" expiration="${4}"
+	echo "{\"expiry\": \"${expiration}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${language}\", \"content\": \"${content}\"} ] }"
 }
 
 ### errors
@@ -566,7 +566,7 @@ postdata() {
 		}
 		e "${!post#$extra }" NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT
 	elif [[ function == $(type -t json_$ENGINE) ]]; then
-		json_$ENGINE "$DESCRIPTION" "$LANGUAGE" "$INPUT"
+		json_$ENGINE "$DESCRIPTION" "$LANGUAGE" "$INPUT" "$EXPIRATION"
 	else
 		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 	fi
