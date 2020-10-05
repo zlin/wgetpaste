@@ -41,7 +41,7 @@ POST_generic() {
 }
 
 ### services
-SERVICES="codepad bpaste dpaste gists snippets"
+SERVICES="bpaste codepad dpaste gists ix_io snippets"
 # bpaste
 ENGINE_bpaste=pinnwand
 URL_bpaste="https://bpaste.net/"
@@ -60,6 +60,9 @@ DEFAULT_EXPIRATION_dpaste="30 days"
 # gists
 ENGINE_gists=gists
 URL_gists="https://api.github.com/gists"
+# ix_io
+ENGINE_ix_io=ix_io
+URL_ix_io="http://ix.io"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -124,15 +127,29 @@ POST_gists() {
 	local description="${2}" language="${3}" content="${6}"
 	[[ "$language" = auto ]] && language="" || language=".$language"
 	echo "{\"description\":\"${description}\",\"public\":\"${PUBLIC_gists}\",\"files\":{\"${description//\/}${language}\":{\"content\":\"${content}\"}}"
-	echo "{\"description\":\"${description}\",\"public\":\"${PUBLIC_gists}\",\"files\":{\"${description//\/}${language}\":{\"content\":\"${content}\"}}"
 }
+# ix_io
+escape_description_ix_io() { echo "$*"; }
+escape_input_ix_io() { echo "$*"; }
+POST_ix_io() {
+	local content="${6}" boundary="WGETPASTE-f62efc3064678a57c6f442ca2f83ff"
+	echo "--$boundary"
+	echo "Content-Disposition: form-data; name=\"f:1\""
+	echo ""
+	echo "${content}"
+	echo "--${boundary}--"
+	ADDITIONAL_HEADERS_ix_io=("Content-Type: multipart/form-data; boundary=${boundary}")
+}
+REGEX_RAW_ix_io='s|^http.*|\0|p'
+REGEX_URL_ix_io='s|^http.*|\0|p'
+
 # snippets
 REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
 REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
 escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
 POST_snippets() {
-    local description="${2}" content="${6}"
+	local description="${2}" content="${6}"
 	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
 }
 # lodgeit
