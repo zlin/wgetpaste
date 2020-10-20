@@ -12,8 +12,36 @@ unset LANGUAGE
 E=$'\e'
 N=$'\n'
 
+# generic post function
+POST_generic() {
+	local post nick description language expiration cvt_tabs input nr extra f
+	post=$1
+	nick=$2
+	description=$3
+	language=$4
+	expiration=$5
+	cvt_tabs=$6
+	input=$7
+
+	nr=${post//[^ ]}
+	[[ 6 = ${#nr} ]] || die "\"${SERVICE}\" is not supported by POST_${SERVICE}()."
+	extra=${post%% *}
+	[[ '%' = $extra ]] || echo -n "$extra&"
+	e() {
+		post="$1"
+		shift
+		while [[ -n $1 ]]; do
+			f=${post%% *}
+			[[ '%' != $f ]] && echo -n "$f=${!1}" && [[ $# -gt 1 ]] && echo -n "&"
+			shift
+			post=${post#$f }
+		done
+	}
+	e "${post#$extra }" nick description language expiration cvt_tabs input
+}
+
 ### services
-SERVICES="codepad bpaste dpaste gists snippets"
+SERVICES="bpaste codepad dpaste gists ix_io snippets"
 # bpaste
 ENGINE_bpaste=pinnwand
 URL_bpaste="https://bpa.st/api/v1/paste"
@@ -32,6 +60,9 @@ DEFAULT_EXPIRATION_dpaste="30 days"
 # gists
 ENGINE_gists=gists
 URL_gists="https://api.github.com/gists"
+# ix_io
+ENGINE_ix_io=ix_io
+URL_ix_io="http://ix.io"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -44,7 +75,9 @@ ADDITIONAL_HEADERS_snippets=("Content-Type: application/json")
 ### engines
 # codepad
 LANGUAGES_codepad="C C++ D Haskell Lua OCaml PHP Perl Plain%Text Python Ruby Scheme Tcl"
-POST_codepad="submit % % lang % % code"
+POST_codepad() {
+	POST_generic "submit % % lang % % code" "$1" "$2" "$3" "$4" "$5" "$6"
+}
 REGEX_URL_codepad='s|^--.*\(http://codepad.org/[^ ]\+\)|\1|p'
 REGEX_RAW_codepad='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2/raw.rb|'
 # dpaste
@@ -54,7 +87,10 @@ LANGUAGE_VALUES_dpaste="% Apache Bash Css Diff DjangoTemplate Haskell JScript Py
 Ruby Rhtml Sql Xml"
 EXPIRATIONS_dpaste="30%days 30%days%after%last%view"
 EXPIRATION_VALUES_dpaste="off on"
-POST_dpaste="submit=Paste+it poster title language hold % content"
+POST_dpaste() {
+	POST_generic "submit=Paste+it poster title language hold % content" "$1" "$2" "$3" "$4" "$5" "$6"
+}
+
 REGEX_RAW_dpaste='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2.txt|'
 # gists
 LANGUAGES_gists="ActionScript Ada Apex AppleScript Arc Arduino ASP Assembly
@@ -87,18 +123,33 @@ REGEX_URL_gists='s|^.*"html_url": "\([^"]\+gist[^"]\+\)".*$|\1|p'
 REGEX_RAW_gists='s|^\(https://gist.github.com\)\(/.*\)$|\1/raw\2|'
 escape_description_gists() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_gists() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
-json_gists() {
-    local description="${1}" language="${2}" content="${3}"
-    [[ "$language" = auto ]] && language="" || language=".$language"
-    echo "{\"description\":\"${description}\",\"public\":\"${PUBLIC_gists}\",\"files\":{\"${description//\/}${language}\":{\"content\":\"${content}\"}}"
+POST_gists() {
+	local description="${2}" language="${3}" content="${6}"
+	[[ "$language" = auto ]] && language="" || language=".$language"
+	echo "{\"description\":\"${description}\",\"public\":\"${PUBLIC_gists}\",\"files\":{\"${description//\/}${language}\":{\"content\":\"${content}\"}}"
 }
+# ix_io
+escape_description_ix_io() { echo "$*"; }
+escape_input_ix_io() { echo "$*"; }
+POST_ix_io() {
+	local content="${6}" boundary="WGETPASTE-f62efc3064678a57c6f442ca2f83ff"
+	echo "--$boundary"
+	echo "Content-Disposition: form-data; name=\"f:1\""
+	echo ""
+	echo "${content}"
+	echo "--${boundary}--"
+	ADDITIONAL_HEADERS_ix_io=("Content-Type: multipart/form-data; boundary=${boundary}")
+}
+REGEX_RAW_ix_io='s|^http.*|\0|p'
+REGEX_URL_ix_io='s|^http.*|\0|p'
+
 # snippets
 REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
 REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
 escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
-json_snippets() {
-    local description="${1}" content="${3}"
+POST_snippets() {
+	local description="${2}" content="${6}"
 	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
 }
 # lodgeit
@@ -137,7 +188,9 @@ objective-c objective-j ocaml ooc perl php text pov prolog python python3 py3tb 
 ragel-c ragel-cpp ragel-d ragel-java ragel-objc ragel-ruby raw rconsole rebol redcode rst rhtml rb \
 rbcon splus sass scala scheme smalltalk smarty sql sqlite3 squidconf tcl tcsh tex diff vala vb.net \
 vim xml xml+cheetah xml+django xml+evoque xml+mako xml+myghty xml+php xml+erb xml+smarty xslt yaml"
-POST_lodgeit="submit=Paste! % % language % % code"
+POST_lodgeit() {
+	POST_generic "submit=Paste! % % language % % code" "$1" "$2" "$3" "$4" "$5" "$6"
+}
 REGEX_RAW_lodgeit='s|^\(https\?://[^/]*/\)show\(/[[:alnum:]]*/\)$|\1raw\2|'
 # pinnwand
 LANGUAGES_pinnwand="ABAP ActionScript%3 ActionScript Ada ANTLR ANTLR%With%ActionScript%Target \
@@ -197,8 +250,8 @@ REGEX_URL_pinnwand='s|^.*"link": "\([^"]\+bpa.st[^"]\+\)".*$|\1|p'
 REGEX_RAW_pinnwand='s|^\(https://bpa.st\)\(/.*\)$|\1/raw\2|'
 escape_description_pinnwand() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
 escape_input_pinnwand() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
-json_pinnwand() {
-    local description="${1}" language="${2}" content="${3}" expiration="${4}"
+POST_pinnwand() {
+    local description="${2}" language="${3}" expiration="${4}" content="${6}"
 	echo "{\"expiry\": \"${expiration}\", \"files\": [ {\"name\": \"${description}\", \"lexer\": \"${language}\", \"content\": \"${content}\"} ] }"
 }
 
@@ -547,29 +600,12 @@ getrecipient() {
 
 # generate POST data
 postdata() {
-	local post nr extra f
+	local post
 	post=POST_$ENGINE
-	if [[ -n ${!post} ]]; then
-		nr=${!post//[^ ]}
-		[[ 6 = ${#nr} ]] || die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
-		extra=${!post%% *}
-		[[ '%' = $extra ]] || echo -n "$extra&"
-		e() {
-			post="$1"
-			shift
-			while [[ -n $1 ]]; do
-				f=${post%% *}
-				[[ '%' != $f ]] && echo -n "$f=${!1}" && [[ $# -gt 1 ]] && echo -n "&"
-				shift
-				post=${post#$f }
-			done
-		}
-		e "${!post#$extra }" NICK DESCRIPTION LANGUAGE EXPIRATION CVT_TABS INPUT
-	elif [[ function == $(type -t json_$ENGINE) ]]; then
-		json_$ENGINE "$DESCRIPTION" "$LANGUAGE" "$INPUT" "$EXPIRATION"
-	else
+	if [[ function != $(type -t $post) ]]; then
 		die "\"${SERVICE}\" is not supported by ${FUNCNAME}()."
 	fi
+	$post "$NICK" "$DESCRIPTION" "$LANGUAGE" "$EXPIRATION" "$CVT_TABS" "$INPUT"
 }
 
 # get url from response from server
@@ -577,6 +613,7 @@ geturl() {
 	local regex location
 	regex=REGEX_URL_$ENGINE
 	location=REGEX_LOC_$ENGINE
+
 	if [[ -n ${!regex} ]]; then
 		[[ needstdout = $1 ]] && return 0
 		sed -n -e "${!regex}" <<< "$*"
