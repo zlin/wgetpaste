@@ -140,7 +140,7 @@ POST_ix_io() {
 	echo "--${boundary}--"
 	ADDITIONAL_HEADERS_ix_io=("Content-Type: multipart/form-data; boundary=${boundary}")
 }
-REGEX_RAW_ix_io='s|^http.*|\0|p'
+REGEX_RAW_ix_io='s|^http.*|\0|'
 REGEX_URL_ix_io='s|^http.*|\0|p'
 
 # snippets
