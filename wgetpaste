@@ -53,10 +53,10 @@ URL_codepad="http://codepad.org/"
 SIZE_codepad="64000 64%KB"
 # dpaste
 ENGINE_dpaste=dpaste
-URL_dpaste="http://dpaste.com/"
-SIZE_dpaste="25000 25%kB"
+URL_dpaste="http://dpaste.com/api/v2/"
+SIZE_dpaste="250000 250%kB"
 DESCRIPTION_SIZE_dpaste="50"
-DEFAULT_EXPIRATION_dpaste="30 days"
+DEFAULT_EXPIRATION_dpaste="1"
 # gists
 ENGINE_gists=gists
 URL_gists="https://api.github.com/gists"
@@ -86,13 +86,35 @@ LANGUAGES_dpaste="Plain%Text Apache%Config Bash CSS Diff Django%Template/HTML Ha
 Python Python%Interactive/Traceback Ruby Ruby%HTML%(ERB) SQL XML"
 LANGUAGE_VALUES_dpaste="% Apache Bash Css Diff DjangoTemplate Haskell JScript Python PythonConsole \
 Ruby Rhtml Sql Xml"
-EXPIRATIONS_dpaste="30%days 30%days%after%last%view"
-EXPIRATION_VALUES_dpaste="off on"
+EXPIRATIONS_dpaste=$(printf "%s " {1..365})
 POST_dpaste() {
-	POST_generic "submit=Paste+it poster title language hold % content" "$1" "$2" "$3" "$4" "$5" "$6"
+	local title="${2}"
+	local syntax="${3}"
+	local expiry_days="${4}"
+	local content="${6}"
+	local boundary="WGETPASTE-cK7MKXxfDNm87mXJzyX0kpKaCkiaQC"
+	echo -e "--$boundary\r"
+	echo -e "Content-Disposition: form-data; name=\"title\"\r"
+	echo -e "\r"
+	echo -e "${title}\r"
+	echo -e "--$boundary\r"
+	echo -e "Content-Disposition: form-data; name=\"syntax\"\r"
+	echo -e "\r"
+	echo -e "${syntax}\r"
+	echo -e "--$boundary\r"
+	echo -e "Content-Disposition: form-data; name=\"expiry_days\"\r"
+	echo -e "\r"
+	echo -e "${expiry_days}\r"
+	echo -e "--$boundary\r"
+	echo -e "Content-Disposition: form-data; name=\"content\"\r"
+	echo -e "\r"
+	echo -e "${content}\r"
+	echo -e "--${boundary}--\r"
+	ADDITIONAL_HEADERS_dpaste=("Content-Type: multipart/form-data; boundary=${boundary}")
 }
+REGEX_RAW_dpaste='s|^http.*|\0.txt|'
+REGEX_URL_dpaste='s|^http.*|\0|p'
 
-REGEX_RAW_dpaste='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2.txt|'
 # gists
 LANGUAGES_gists="ActionScript Ada Apex AppleScript Arc Arduino ASP Assembly
 Augeas AutoHotkey Batchfile Befunge BlitzMax Boo Brainfuck Bro C C# C++
