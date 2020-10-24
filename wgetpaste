@@ -68,14 +68,14 @@ URL_gists="https://api.github.com/gists"
 ENGINE_ix_io=ix_io
 URL_ix_io="http://ix.io"
 SIZE_ix_io="1000000 1%MB"
-# tinyurl
-ENGINE_tinyurl=tinyurl
-URL_tinyurl="http://tinyurl.com/ api-create.php"
-REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
 # snippets
 ENGINE_snippets=snippets
 URL_snippets="https://gitlab.com/api/v4/snippets"
 ADDITIONAL_HEADERS_snippets=("Content-Type: application/json")
+# tinyurl
+ENGINE_tinyurl=tinyurl
+URL_tinyurl="http://tinyurl.com/ api-create.php"
+REGEX_RAW_tinyurl='s|^\(http://[^/]*/\)\([[:alnum:]]*\)$|\1\2|'
 
 ### engines
 # 0x0
@@ -184,16 +184,6 @@ POST_ix_io() {
 }
 REGEX_RAW_ix_io='s|^http.*|\0|'
 REGEX_URL_ix_io='s|^http.*|\0|p'
-
-# snippets
-REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
-REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
-escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
-escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
-POST_snippets() {
-	local description="${2}" content="${6}"
-	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
-}
 # lodgeit
 LANGUAGES_lodgeit="ABAP ActionScript ActionScript%3 Ada ANTLR ANTLR%With%ActionScript%Target \
 ANTLR%With%CPP%Target ANTLR%With%C#%Target ANTLR%With%Java%Target ANTLR%With%ObjectiveC%Target \
@@ -293,6 +283,15 @@ POST_pinnwand() {
 }
 REGEX_LOC_pinnwand="\(/show/[^ ]*\).*$|https://bpaste.net\1"
 REGEX_RAW_pinnwand='s|^\(https\?://[^/]*/\)show\(/[^ ]*/\?\)$|\1raw\2|'
+# snippets
+REGEX_URL_snippets='s|.*"web_url":"\([^"]*\)".*|\1|p'
+REGEX_RAW_snippets='s|^\(.*/snippets\)\(/.*\)$|\1\2/raw|'
+escape_description_snippets() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
+escape_input_snippets() { sed -e 's|\\|\\\\|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' -e 's|\t|\\t|g' -e 's|"|\\"|g' -e 's|$|\\n|' <<< "$*" | tr -d '\n'; }
+POST_snippets() {
+	local description="${2}" content="${6}"
+	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
+}
 
 ### errors
 die() {
