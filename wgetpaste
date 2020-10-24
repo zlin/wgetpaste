@@ -63,6 +63,7 @@ URL_gists="https://api.github.com/gists"
 # ix_io
 ENGINE_ix_io=ix_io
 URL_ix_io="http://ix.io"
+SIZE_ix_io="1000000 1%MB"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
