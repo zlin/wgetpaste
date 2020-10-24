@@ -41,7 +41,11 @@ POST_generic() {
 }
 
 ### services
-SERVICES="bpaste codepad dpaste gists ix_io snippets"
+SERVICES="0x0 bpaste codepad dpaste gists ix_io snippets"
+# 0x0
+ENGINE_0x0=0x0
+URL_0x0="http://0x0.st"
+SIZE_0x0="536870912 536%MB"
 # bpaste
 ENGINE_bpaste=pinnwand
 URL_bpaste="https://bpaste.net/"
@@ -74,8 +78,23 @@ URL_snippets="https://gitlab.com/api/v4/snippets"
 ADDITIONAL_HEADERS_snippets=("Content-Type: application/json")
 
 ### engines
-# codepad
+# 0x0
+escape_description_0x0() { echo "$*"; }
+escape_input_0x0() { echo "$*"; }
+POST_0x0() {
+	local filename="${2}"
+	local content="${6}" boundary="WGETPASTE-yuLr+iHOSQ+trEgDcj9UVq5R302bid"
+	echo "--$boundary"
+	echo "Content-Disposition: form-data; name=\"file\"; filename=\"${filename}\""
+	echo ""
+	echo "${content}"
+	echo "--${boundary}--"
+	ADDITIONAL_HEADERS_0x0=("Content-Type: multipart/form-data; boundary=${boundary}")
+}
+REGEX_RAW_0x0='s|^http.*|\0|'
+REGEX_URL_0x0='s|^http.*|\0|p'
 LANGUAGES_codepad="C C++ D Haskell Lua OCaml PHP Perl Plain%Text Python Ruby Scheme Tcl"
+# codepad
 POST_codepad() {
 	POST_generic "submit % % lang % % code" "$1" "$2" "$3" "$4" "$5" "$6"
 }
