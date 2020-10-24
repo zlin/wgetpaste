@@ -41,7 +41,7 @@ POST_generic() {
 }
 
 ### services
-SERVICES="0x0 bpaste codepad dpaste gists ix_io snippets"
+SERVICES="0x0 bpaste codepad dpaste gists ix_io snippets sprunge"
 # 0x0
 ENGINE_0x0=0x0
 URL_0x0="http://0x0.st"
@@ -72,6 +72,10 @@ SIZE_ix_io="1000000 1%MB"
 ENGINE_snippets=snippets
 URL_snippets="https://gitlab.com/api/v4/snippets"
 ADDITIONAL_HEADERS_snippets=("Content-Type: application/json")
+# sprunge
+ENGINE_sprunge=sprunge
+URL_sprunge="http://sprunge.us"
+SIZE_sprunge="1000000 1%MB"
 # tinyurl
 ENGINE_tinyurl=tinyurl
 URL_tinyurl="http://tinyurl.com/ api-create.php"
@@ -292,6 +296,20 @@ POST_snippets() {
 	local description="${2}" content="${6}"
 	echo "{\"title\": \"${description}\", \"content\": \"${content}\", \"description\": \"${description}\", \"file_name\": \"${description}\", \"visibility\": \"${VISIBILITY_snippets}\" }"
 }
+# sprunge
+escape_description_sprunge() { echo "$*"; }
+escape_input_sprunge() { echo "$*"; }
+POST_sprunge() {
+	local content="${6}" boundary="WGETPASTE-1sQZYb7qiSkT18ZwWPNg18gEmHRztv"
+	echo "--$boundary"
+	echo "Content-Disposition: form-data; name=\"sprunge\""
+	echo ""
+	echo "${content}"
+	echo "--${boundary}--"
+	ADDITIONAL_HEADERS_sprunge=("Content-Type: multipart/form-data; boundary=${boundary}")
+}
+REGEX_RAW_sprunge='s|^http.*|\0|'
+REGEX_URL_sprunge='s|^http.*|\0|p'
 
 ### errors
 die() {
