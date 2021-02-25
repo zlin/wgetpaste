@@ -283,7 +283,7 @@ shell-session smali smalltalk smarty snobol sp sqlite3 sql squidconf splus sml s
 tcl tcsh tea tex text text treetop ts urbiscript vala vb.net velocity verilog vgl vhdl vim \
 xml+cheetah xml+django xml+evoque xml+lasso xml+mako xml+myghty xml+php xml+erb xml+smarty \
 xml+velocity xml xquery xslt xtend yaml"
-EXPIRATIONS_pinnwand="1day 1week 1month never"
+EXPIRATIONS_pinnwand="1day 1week"
 REGEX_URL_pinnwand='s|^.*"link": "\([^"]\+bpa.st[^"]\+\)".*$|\1|p'
 REGEX_RAW_pinnwand='s|^\(https://bpa.st\)\(/.*\)$|\1/raw\2|'
 escape_description_pinnwand() { sed -e 's|"|\\"|g' -e 's|\x1b|\\u001b|g' -e 's|\r||g' <<< "$*"; }
