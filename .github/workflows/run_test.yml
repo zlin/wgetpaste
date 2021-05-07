@@ -1,0 +1,10 @@
+name: 'wgetpaste test runner'
+on: [push]
+jobs:
+  run-test:
+    name: 'Run test/test.sh'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: test/test.sh
+        shell: bash
