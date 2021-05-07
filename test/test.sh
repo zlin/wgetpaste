@@ -20,7 +20,7 @@ echo "Using download directory: $DL_DIR"
 
 # Post test file into each service (if possible)
 # Download the resulting paste into /tmp/wgetpaste_test.XXXXX/<service>.txt
-for s in $($TEST_DIR/../wgetpaste -S --completions); do
+for s in $("$TEST_DIR"/../wgetpaste -S --completions); do
     # Ignore codepad (timing out)
     if [ "$s" == 'codepad' ]; then
         continue
@@ -28,7 +28,7 @@ for s in $($TEST_DIR/../wgetpaste -S --completions); do
 
     # Discard stderr output
     echo -n "Posting to $s: "
-    URL="$($TEST_DIR/../wgetpaste -r -s "$s" "$TEST_FILE" 2>/dev/null)"
+    URL="$("$TEST_DIR"/../wgetpaste -r -s "$s" "$TEST_FILE" 2>/dev/null)"
     STATUS="$?"
 
     # Skip failed posts (eg, not authorized for GitHub or GitLab)
@@ -55,7 +55,7 @@ if [ "$DL_COUNT" -eq 0 ]; then
 fi
 
 # Compare downloaded files
-for f in $DL_DIR/*; do
+for f in "$DL_DIR"/*; do
     echo -n "Testing file $f: "
     # Ignore missing trailing newline in downloaded file
     if ! (diff -q -Z "$TEST_FILE" "$f" &>/dev/null); then
