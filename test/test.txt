@@ -1,0 +1,26 @@
+wgetpaste test data
+
+test common string escapes used in programming languages
+#include <stdio.h>
+
+int main (void) {
+    printf("test bell\a\n");
+    printf("test backspace\bE\n");
+    printf("test escape\e[31m red text\e[m end red text\n");
+    printf("test form feed\f");
+    printf("test newline\n");
+    printf("test carriage return\rA\n");
+    printf("test tab\tend tab\n");
+    printf("test vertical tab\vend vertical tab\n");
+    printf("test backslash\\\n");
+    printf("test single quote\'\n");
+    printf("test double quote\"\n");
+    printf("test question mark\?\n");
+    printf("test octal (A) \101\n");
+    printf("test octal (null)\n\0not printed");
+    printf("test hex (A) \x41\n");
+    printf("test unocpde < 0x1000 (acute A) \u00c1\n");
+    printf("test unicode (acute A) \U000000c1\n");
+
+    printf("test literal tab	end tab\n");
+}
