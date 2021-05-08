@@ -78,7 +78,7 @@ if [ "$DL_COUNT" -eq 0 ]; then
 fi
 
 # Compare downloaded files
-for dl_file in "$DL_DIR"/*; do
+for dl_file in "$DL_DIR"/*.txt; do
     echo -n "Testing file $dl_file: "
     # Ignore missing trailing newline in downloaded file
     if ! (diff -q -Z "$TEST_FILE" "$dl_file" &>/dev/null); then
