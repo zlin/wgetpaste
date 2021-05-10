@@ -12,6 +12,8 @@ DL_DIR="$(mktemp -q -d /tmp/wgetpaste_test.XXXXX)"
 # codepad: timing out
 HARD_SKIPS=('codepad')
 HARD_SKIP_COUNT=0
+# Services expected to require an authorization token
+AUTH_SKIPS=('gists' 'snippets')
 AUTH_SKIP_COUNT=0
 FAIL_SKIP_COUNT=0
 DL_COUNT=0
@@ -47,9 +49,17 @@ for serv in $("$TEST_DIR"/../wgetpaste -S --completions); do
     # Skip failed posts (eg, not authorized for GitHub/GitLab, service error)
     if [ "$STATUS" -ne 0 ]; then
         if (grep -iq "HTTP.*401.*Unauthorized" "$ERROR_LOG"); then
-            echo "SKIPPING, needs authorization..."
-            AUTH_SKIP_COUNT=$((AUTH_SKIP_COUNT + 1))
-            rm "$ERROR_LOG"
+            # Check if a 401 is expected behavior. If it isn't, mark as fail
+            for as in "${AUTH_SKIPS[@]}"; do
+                if [ "$serv" == "$as" ]; then
+                    echo "SKIPPING, needs authorization..."
+                    AUTH_SKIP_COUNT=$((AUTH_SKIP_COUNT + 1))
+                    rm "$ERROR_LOG"
+                    continue 2
+                fi
+            done
+            echo "UNEXPECTED 401, skipping..."
+            FAIL_SKIP_COUNT=$((FAIL_SKIP_COUNT + 1))
         else
             echo "SKIPPING, failed to post..."
             FAIL_SKIP_COUNT=$((FAIL_SKIP_COUNT + 1))
@@ -81,11 +91,11 @@ fi
 for dl_file in "$DL_DIR"/*.txt; do
     echo -n "Testing file $dl_file: "
     # Ignore missing trailing newline in downloaded file
-    if ! (diff -q -Z "$TEST_FILE" "$dl_file" &>/dev/null); then
+    if (diff -q -Z "$TEST_FILE" "$dl_file" &>/dev/null); then
+        echo "SUCCESS!"
+    else
         echo "FAILED!"
         DL_MISMATCH=$((DL_MISMATCH + 1))
-    else
-        echo "SUCCESS!"
     fi
 done
 
