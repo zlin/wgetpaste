@@ -9,8 +9,10 @@ TEST_DIR="$(dirname "$0")"
 TEST_FILE="$TEST_DIR/test.txt"
 DL_DIR="$(mktemp -q -d /tmp/wgetpaste_test.XXXXX)"
 # Services to hard skip
-# codepad: timing out
-HARD_SKIPS=('codepad')
+# Pre-declare as map to maintain type even if empty
+# key -> value := service -> reason
+declare -A HARD_SKIPS
+HARD_SKIPS=(['codepad']='always times out')
 HARD_SKIP_COUNT=0
 # Services expected to require an authorization token
 AUTH_SKIPS=('gists' 'snippets')
@@ -30,9 +32,9 @@ echo "Using download directory: $DL_DIR"
 # Download the resulting paste into /tmp/wgetpaste_test.XXXXX/<service>.txt
 for serv in $("$TEST_DIR"/../wgetpaste -S --completions); do
     # Hard skips
-    for hs in "${HARD_SKIPS[@]}"; do
+    for hs in "${!HARD_SKIPS[@]}"; do
         if [ "$serv" == "$hs" ]; then
-            echo "HARD SKIP on $serv..."
+            echo "HARD SKIP on $serv -- reason: ${HARD_SKIPS[$serv]}"
             HARD_SKIP_COUNT=$((HARD_SKIP_COUNT + 1))
             continue 2
         fi
