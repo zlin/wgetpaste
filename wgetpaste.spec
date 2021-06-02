@@ -1,5 +1,5 @@
 Name:           wgetpaste
-Version:        2.29
+Version:        2.32
 Release:        1%{?dist}
 Summary:        Command-line interface to various paste-bins
 
