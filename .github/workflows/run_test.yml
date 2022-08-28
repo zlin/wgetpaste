@@ -8,3 +8,15 @@ jobs:
       - uses: actions/checkout@v2
       - run: test/test.sh
         shell: bash
+  run-test-ansi:
+    name: 'Run test/test_ansi.sh'
+    # 22.04 is the earliest version that has ansifilter in the repos
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: 'Install ansifilter'
+        run: |
+          sudo apt-get update
+          sudo apt-get install ansifilter
+      - run: test/test_ansi.sh
+        shell: bash
