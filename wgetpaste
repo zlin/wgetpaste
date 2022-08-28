@@ -372,6 +372,20 @@ converttoraw() {
 	return 1
 }
 
+# strip ANSI codes if NOANSI is set, otherwise pass the data through without
+# transforming it
+#
+# accepts files as args for use with pasting the contents of said file
+# (file checked at the call site)
+NOANSI=
+strip_ansi() {
+	if [[ $NOANSI ]]; then
+		"$(type -P ansifilter)" "$@"
+	else
+		cat "$@"
+	fi
+}
+
 ### verification
 verifyservice() {
 	for s in $SERVICES; do
@@ -524,6 +538,7 @@ Options:
     -x, --xcut                    read input from clipboard (requires x11-misc/xclip)
     -X, --xpaste                  write resulting url to the X primary selection buffer (requires x11-misc/xclip)
     -C, --xclippaste              write resulting url to the X clipboard selection buffer (requires x11-misc/xclip)
+    -N, --no-ansi                 strip ANSI codes such as colors before pasting (requires app-text/ansifilter)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
@@ -774,6 +789,9 @@ while [[ -n $1 ]]; do
 		requiredarg "$@"
 		NICK=$(escape "$2")
 		;;
+		-N | --no-ansi )
+		NOANSI=0
+		;;
 		-r | --raw )
 		RAW=0
 		;;
@@ -817,6 +835,11 @@ while [[ -n $1 ]]; do
 	esac
 	shift $args
 done
+
+# ensure ansifilter exists if requested
+if [[ $NOANSI ]]; then
+	[[ -n "$(type -p ansifilter)" ]] || die "-N/--no-ansi requires app-text/ansifilter to be installed"
+fi
 
 ### defaults
 load_configs() {
@@ -934,31 +957,31 @@ case "$SOURCE" in
 	command )
 	for c in "${COMMANDS[@]}"; do
 		if [[ $TEE ]]; then
-			echo "$PS1 $c$N$(bash -c "$c" 2>&1)$N" | tee -a "$TMPF"
+			echo "$PS1 $c$N$(bash -c "$c" 2>&1 | strip_ansi)$N" | tee -a "$TMPF"
 		else
-			INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1)$N$N"
+			INPUT="$INPUT$PS1 $c$N$(bash -c "$c" 2>&1 | strip_ansi)$N$N"
 		fi
 	done
 	;;
 	info )
 	if [[ $TEE ]]; then
-		echo "$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)" | tee "$TMPF"
+		echo "$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1 | strip_ansi)" | tee "$TMPF"
 	else
-		INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
+		INPUT="$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1 | strip_ansi)"
 	fi
 	;;
 	xcut )
 	if [[ $TEE ]]; then
-		x_cut | tee "$TMPF"
+		x_cut | strip_ansi | tee "$TMPF"
 	else
-		INPUT="$(x_cut)"
+		INPUT="$(x_cut | strip_ansi)"
 	fi
 	;;
 	stdin )
 		if [[ $TEE ]]; then
-			tee "$TMPF"
+			strip_ansi | tee "$TMPF"
 		else
-			INPUT="$(cat)"
+			INPUT="$(strip_ansi)"
 		fi
 	;;
 	files )
@@ -966,17 +989,17 @@ case "$SOURCE" in
 		for f in "${FILES[@]}"; do
 			[[ -r $f ]] || notreadable "$f"
 			if [[ $TEE ]]; then
-				echo "$PS1 cat $f$N$(<"$f")$N" | tee -a "$TMPF"
+				echo "$PS1 cat $f$N$(strip_ansi "$f")$N" | tee -a "$TMPF"
 			else
-				INPUT="$INPUT$PS1 cat $f$N$(<"$f")$N$N"
+				INPUT="$INPUT$PS1 cat $f$N$(strip_ansi "$f")$N$N"
 			fi
 		done
 	else
 		[[ -r $FILES ]] || notreadable "$FILES"
 		if [[ $TEE ]]; then
-			tee "$TMPF" < "$FILES"
+			strip_ansi "$FILES" | tee "$TMPF"
 		else
-			INPUT=$(<"$FILES")
+			INPUT=$(strip_ansi "$FILES")
 		fi
 	fi
 	;;
@@ -992,9 +1015,9 @@ fi
 if [[ $INFO ]]; then
 	DESCRIPTION="$DESCRIPTION $PS1 $INFO_COMMAND;"
 	if [[ $TEE ]]; then
-		echo "$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)" | tee -a "$TMPF"
+		echo "$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1 | strip_ansi)" | tee -a "$TMPF"
 	else
-		INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1)"
+		INPUT="$INPUT$N$PS1 $INFO_COMMAND$N$($INFO_COMMAND $INFO_ARGS 2>&1 | strip_ansi)"
 	fi
 fi
 
