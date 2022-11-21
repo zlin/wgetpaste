@@ -365,7 +365,7 @@ converttoraw() {
 	if [[ -n ${!regex} ]]; then
 		RAWURL=$(sed -e "${!regex}" <<< "$URL")
 		[[ -n $RAWURL ]] && return 0
-		echo "Convertion to raw url failed." >&2
+		echo "Conversion to raw url failed." >&2
 	else
 		echo "Raw download of pastes is not supported by $(getrecipient)." >&2
 	fi
