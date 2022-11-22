@@ -2,7 +2,7 @@
 
 # wgetpaste test script
 # Exit code: number of mismatched downloads or 1 for general failure
-# Copyright (C) 2021  xxc3nsoredxx
+# Copyright (C) 2021-2022 Oskari Pirhonen <xxc3ncoredxx@gmail.com>
 
 # Don't assume the test is being run from the same directory as the script
 TEST_DIR="$(dirname "$0")"

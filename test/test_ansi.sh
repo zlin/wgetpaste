@@ -3,7 +3,7 @@
 # wgetpaste test script (stripping ANSI codes)
 # Based on test/test.sh
 # Exit code: number of mismatched downloads or 1 for general failure
-# Copyright (C) 2022  Oskari Pirhonen <xxc3ncoredxx@gmail.com>
+# Copyright (C) 2022 Oskari Pirhonen <xxc3ncoredxx@gmail.com>
 
 # Don't assume the test is being run from the same directory as the script
 TEST_DIR="$(dirname "$0")"
