@@ -945,7 +945,7 @@ fi
 
 # create tmpfile for use with tee
 if [[ $TEE ]]; then
-	TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
+	TMPF=$(mktemp -q --tmpdir wgetpaste.XXXXXX)
 	[[ -f $TMPF ]] || die "Could not create a temporary file for use with tee."
 fi
 
@@ -1049,7 +1049,7 @@ if [[ $SERVICE == tinyurl ]]; then
 else
 	# create temp file (wget is much more reliable reading
 	# large input via --post-file rather than --post-data)
-	[[ -f $TMPF ]] || TMPF=$(mktemp /tmp/wgetpaste.XXXXXX)
+	[[ -f $TMPF ]] || TMPF=$(mktemp -q --tmpdir wgetpaste.XXXXXX)
 	if [[ -f $TMPF ]]; then
 		postdata > "$TMPF" || die "Failed to write to temporary file: \"$TMPF\"."
 		WGETARGS="--post-file=$TMPF"
