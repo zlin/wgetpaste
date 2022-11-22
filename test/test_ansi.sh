@@ -9,7 +9,7 @@
 TEST_DIR="$(dirname "$0")"
 ANSI_FILE="$TEST_DIR/red.txt"
 NOANSI_FILE="$TEST_DIR/red_no_ansi.txt"
-DL_DIR="$(mktemp -q -d /tmp/wgetpaste_test_ansi.XXXXX)"
+DL_DIR="$(mktemp -q --tmpdir -d wgetpaste_test_ansi.XXXXX)"
 # Services to hard skip
 # Pre-declare as map to maintain type even if empty
 # key -> value := service -> reason

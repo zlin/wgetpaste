@@ -7,7 +7,7 @@
 # Don't assume the test is being run from the same directory as the script
 TEST_DIR="$(dirname "$0")"
 TEST_FILE="$TEST_DIR/test.txt"
-DL_DIR="$(mktemp -q -d /tmp/wgetpaste_test.XXXXX)"
+DL_DIR="$(mktemp -q --tmpdir -d wgetpaste_test.XXXXX)"
 # Services to hard skip
 # Pre-declare as map to maintain type even if empty
 # key -> value := service -> reason
