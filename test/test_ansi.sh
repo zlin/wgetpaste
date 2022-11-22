@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # wgetpaste test script (stripping ANSI codes)
 # Based on test/test.sh

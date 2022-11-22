@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 
 # wgetpaste test script
 # Exit code: number of mismatched downloads or 1 for general failure
