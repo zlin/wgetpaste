@@ -1,5 +1,5 @@
 name: 'wgetpaste test runner'
-on: [push]
+on: [pull_request, push]
 jobs:
   run-test:
     name: 'Run test/test.sh'
@@ -10,8 +10,7 @@ jobs:
         shell: bash
   run-test-ansi:
     name: 'Run test/test_ansi.sh'
-    # 22.04 is the earliest version that has ansifilter in the repos
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: 'Install ansifilter'
