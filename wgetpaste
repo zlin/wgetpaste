@@ -41,7 +41,7 @@ POST_generic() {
 }
 
 ### services
-SERVICES="0x0 bpaste codepad dpaste gists ix_io snippets sprunge"
+SERVICES="0x0 bpaste codepad dpaste gists ix_io snippets"
 # 0x0
 ENGINE_0x0=0x0
 URL_0x0="http://0x0.st"
