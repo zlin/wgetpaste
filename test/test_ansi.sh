@@ -94,8 +94,8 @@ fi
 
 # Paste stuff. Use a short timeout between requests (we're friendly after all!)
 sleep 1
-echo -n "Pasting command output (cat): "
-ERROR_LOG="$DL_DIR/command-error.log"
+echo -n "Pasting command output with ANSI stripping (cat): "
+ERROR_LOG="$DL_DIR/command-noansi-error.log"
 URL="$("$TEST_DIR"/../wgetpaste -N -r -s "$WORKING" -v -c "cat $ANSI_FILE" 2>"$ERROR_LOG")"
 if [ $? -ne 0 ]; then
     echo "FAILED!"
@@ -104,7 +104,7 @@ else
     echo "SUCCESS!"
 
     echo -n "Downloading: "
-    if ! (wget -q "$URL" -O "$DL_DIR/command.txt" 2>>"$ERROR_LOG"); then
+    if ! (wget -q "$URL" -O "$DL_DIR/command-noansi.txt" 2>>"$ERROR_LOG"); then
         echo "FAILED!"
         FAILED_PASTE=$((FAILED_PASTE + 1))
     else
@@ -112,13 +112,35 @@ else
         rm "$ERROR_LOG"
 
         echo "Removing 'command run' header"
-        sed -i -e '1d' "$DL_DIR/command.txt"
+        sed -i -e '1d' "$DL_DIR/command-noansi.txt"
+    fi
+fi
+sleep 1
+echo -n "Pasting command output without ANSI stripping (cat): "
+ERROR_LOG="$DL_DIR/command-ansi-error.log"
+URL="$("$TEST_DIR"/../wgetpaste -A -r -s "$WORKING" -v -c "cat $ANSI_FILE" 2>"$ERROR_LOG")"
+if [ $? -ne 0 ]; then
+    echo "FAILED!"
+    FAILED_PASTE=$((FAILED_PASTE + 1))
+else
+    echo "SUCCESS!"
+
+    echo -n "Downloading: "
+    if ! (wget -q "$URL" -O "$DL_DIR/command-ansi.txt" 2>>"$ERROR_LOG"); then
+        echo "FAILED!"
+        FAILED_PASTE=$((FAILED_PASTE + 1))
+    else
+        echo "SUCCESS"
+        rm "$ERROR_LOG"
+
+        echo "Removing 'command run' header"
+        sed -i -e '1d' "$DL_DIR/command-ansi.txt"
     fi
 fi
 
 sleep 1
-echo -n "Pasting stdin (cat | wgetpaste): "
-ERROR_LOG="$DL_DIR/stdin-error.log"
+echo -n "Pasting stdin with ANSI stripping (cat | wgetpaste): "
+ERROR_LOG="$DL_DIR/stdin-noansi-error.log"
 URL="$(cat "$ANSI_FILE" | "$TEST_DIR"/../wgetpaste -N -r -s "$WORKING" -v 2>"$ERROR_LOG")"
 if [ $? -ne 0 ]; then
     echo "FAILED!"
@@ -127,7 +149,26 @@ else
     echo "SUCCESS!"
 
     echo -n "Downloading: "
-    if ! (wget -q "$URL" -O "$DL_DIR/stdin.txt" 2>>"$ERROR_LOG"); then
+    if ! (wget -q "$URL" -O "$DL_DIR/stdin-noansi.txt" 2>>"$ERROR_LOG"); then
+        echo "FAILED!"
+        FAILED_PASTE=$((FAILED_PASTE + 1))
+    else
+        echo "SUCCESS!"
+        rm "$ERROR_LOG"
+    fi
+fi
+sleep 1
+echo -n "Pasting stdin without ANSI stripping (cat | wgetpaste): "
+ERROR_LOG="$DL_DIR/stdin-ansi-error.log"
+URL="$(cat "$ANSI_FILE" | "$TEST_DIR"/../wgetpaste -A -r -s "$WORKING" -v 2>"$ERROR_LOG")"
+if [ $? -ne 0 ]; then
+    echo "FAILED!"
+    FAILED_PASTE=$((FAILED_PASTE + 1))
+else
+    echo "SUCCESS!"
+
+    echo -n "Downloading: "
+    if ! (wget -q "$URL" -O "$DL_DIR/stdin-ansi.txt" 2>>"$ERROR_LOG"); then
         echo "FAILED!"
         FAILED_PASTE=$((FAILED_PASTE + 1))
     else
@@ -137,8 +178,8 @@ else
 fi
 
 sleep 1
-echo -n "Pasting a file: "
-ERROR_LOG="$DL_DIR/file-error.log"
+echo -n "Pasting a file with ANSI stripping: "
+ERROR_LOG="$DL_DIR/file-noansi-error.log"
 URL="$("$TEST_DIR"/../wgetpaste -N -r -s "$WORKING" -v "$ANSI_FILE" 2>"$ERROR_LOG")"
 if [ $? -ne 0 ]; then
     echo "FAILED!"
@@ -147,7 +188,26 @@ else
     echo "SUCCESS!"
 
     echo -n "Downloading: "
-    if ! (wget -q "$URL" -O "$DL_DIR/file.txt" 2>>"$ERROR_LOG"); then
+    if ! (wget -q "$URL" -O "$DL_DIR/file-noansi.txt" 2>>"$ERROR_LOG"); then
+        echo "FAILED!"
+        FAILED_PASTE=$((FAILED_PASTE + 1))
+    else
+        echo "SUCCESS!"
+        rm "$ERROR_LOG"
+    fi
+fi
+sleep 1
+echo -n "Pasting a file without ANSI stripping: "
+ERROR_LOG="$DL_DIR/file-ansi-error.log"
+URL="$("$TEST_DIR"/../wgetpaste -A -r -s "$WORKING" -v "$ANSI_FILE" 2>"$ERROR_LOG")"
+if [ $? -ne 0 ]; then
+    echo "FAILED!"
+    FAILED_PASTE=$((FAILED_PASTE + 1))
+else
+    echo "SUCCESS!"
+
+    echo -n "Downloading: "
+    if ! (wget -q "$URL" -O "$DL_DIR/file-ansi.txt" 2>>"$ERROR_LOG"); then
         echo "FAILED!"
         FAILED_PASTE=$((FAILED_PASTE + 1))
     else
@@ -157,10 +217,20 @@ else
 fi
 
 # Compare downloaded files
-for dl_file in "$DL_DIR"/*.txt; do
+for dl_file in "$DL_DIR"/*-noansi.txt; do
     echo -n "Testing file $dl_file: "
     # Ignore missing trailing newline and extra empty lines in downloaded file
     if (diff -q -Z -B "$NOANSI_FILE" "$dl_file" &>/dev/null); then
+        echo "SUCCESS!"
+    else
+        echo "FAILED!"
+        DL_MISMATCH=$((DL_MISMATCH + 1))
+    fi
+done
+for dl_file in "$DL_DIR"/*-ansi.txt; do
+    echo -n "Testing file $dl_file: "
+    # Ignore missing trailing newline and extra empty lines in downloaded file
+    if (diff -q -Z -B "$ANSI_FILE" "$dl_file" &>/dev/null); then
         echo "SUCCESS!"
     else
         echo "FAILED!"
