@@ -703,7 +703,32 @@ geturl() {
 	fi | tail -n1
 }
 
-### read cli options
+# read the config files
+load_configs() {
+	if [[ ! $IGNORECONFIGS ]]; then
+		# compatibility code
+		local f deprecated=
+		for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
+			if [[ -f $f ]]; then
+				if [[ -z $deprecated ]]; then
+					echo "The config files for wgetpaste have changed to *.conf.$N" >&2
+					deprecated=0
+				fi
+				echo "Please move ${f} to ${f%.bash}.conf" >&2
+				source "$f" || die "Failed to source $f"
+			fi
+		done
+		[[ -n $deprecated ]] && echo >&2
+		# new locations override old ones in case they collide
+		for f in {/etc/,~/.}wgetpaste{.d/*,}.conf; do
+			if [[ -f $f ]]; then
+				source "$f" || die "Failed to source $f"
+			fi
+		done
+	fi
+}
+
+### get runtime options
 
 # separate groups of short options. replace --foo=bar with --foo bar
 while [[ -n $1 ]]; do
@@ -738,6 +763,8 @@ done
 
 # set the separated options as input options.
 set -- "${ARGS[@]}"
+
+load_configs
 
 while [[ -n $1 ]]; do
 	((args=1))
@@ -842,30 +869,6 @@ if [[ $NOANSI ]]; then
 fi
 
 ### defaults
-load_configs() {
-	if [[ ! $IGNORECONFIGS ]]; then
-		# compatibility code
-		local f deprecated=
-		for f in {/etc/,~/.}wgetpaste{.d/*.bash,}; do
-			if [[ -f $f ]]; then
-				if [[ -z $deprecated ]]; then
-					echo "The config files for wgetpaste have changed to *.conf.$N" >&2
-					deprecated=0
-				fi
-				echo "Please move ${f} to ${f%.bash}.conf" >&2
-				source "$f" || die "Failed to source $f"
-			fi
-		done
-		[[ -n $deprecated ]] && echo >&2
-		# new locations override old ones in case they collide
-		for f in {/etc/,~/.}wgetpaste{.d/*,}.conf; do
-			if [[ -f $f ]]; then
-				source "$f" || die "Failed to source $f"
-			fi
-		done
-	fi
-}
-load_configs
 [[ $SERVICESET ]] && verifyservice "$SERVICESET" && SERVICE=$(escape "$SERVICESET")
 DEFAULT_NICK=${DEFAULT_NICK:-$(whoami)} || die "whoami failed"
 DEFAULT_SERVICE=${DEFAULT_SERVICE:-bpaste}
