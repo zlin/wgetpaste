@@ -539,6 +539,8 @@ Options:
     -X, --xpaste                  write resulting url to the X primary selection buffer (requires x11-misc/xclip)
     -C, --xclippaste              write resulting url to the X clipboard selection buffer (requires x11-misc/xclip)
     -N, --no-ansi                 strip ANSI codes such as colors before pasting (requires app-text/ansifilter)
+    -A, --ansi                    don't strip ANSI codes
+                                  (useful for undoing NOANSI specified in a config file)
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
@@ -771,6 +773,9 @@ while [[ -n $1 ]]; do
 	case "$1" in
 		-- )
 		shift && getfilenames "$@" && break
+		;;
+		-A | --ansi )
+		NOANSI=
 		;;
 		-c | --command )
 		requiredarg "$@"
