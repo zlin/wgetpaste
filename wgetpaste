@@ -559,7 +559,7 @@ Options:
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
-	-q, --quiet                   stdout only the url
+    -q, --quiet                   stdout only the url
     -v, --verbose                 show wget stderr output if no url is received
         --completions             emit output suitable for shell completions (only affects --list-*)
         --debug                   be *very* verbose (implies -v)
