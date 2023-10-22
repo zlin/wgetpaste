@@ -50,6 +50,7 @@ _arguments -s : \
   '(--xclippaste -C)'{--xclippaste,-C}'[write resulting url to the X clipboard selection buffer]' \
   '(--raw -r)'{--raw,-r}'[show url for the raw paste]' \
   '(--tee -t)'{--tee,-t}'[use tee to show what is being pasted]' \
+  '(--quiet -q)'{--quiet,-q}'[stdout only the url]' \
   '(--verbose -v)'{--verbose,-v}'[show wget stderr output if no url is received]' \
   '--debug[be very verbose]' \
   '(--help -h)'{--help,-h}'[show help and exit]' \
