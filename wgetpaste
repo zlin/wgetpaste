@@ -559,6 +559,7 @@ Options:
 
     -r, --raw                     show url for the raw paste (no syntax highlighting or html)
     -t, --tee                     use tee to show what is being pasted
+    -q, --quiet                   show the url only
     -v, --verbose                 show wget stderr output if no url is received
         --completions             emit output suitable for shell completions (only affects --list-*)
         --debug                   be *very* verbose (implies -v)
@@ -657,7 +658,7 @@ showexpirations() {
 }
 
 showurl() {
-	echo -n "Your ${2}paste can be seen here: " >&2
+	[[ $QUIET ]] || echo -n "Your ${2}paste can be seen here: " >&2
 	echo "$1"
 	[[ $XPASTE ]] && x_paste "$1" primary
 	[[ $XCLIPPASTE ]] && x_paste "$1" clipboard
@@ -808,6 +809,9 @@ while [[ -n $1 ]]; do
 		;;
 		-N | --no-ansi )
 		NOANSI=0
+		;;
+		-q | --quiet)
+		QUIET=0
 		;;
 		-r | --raw )
 		RAW=0
