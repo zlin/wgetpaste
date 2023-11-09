@@ -614,9 +614,9 @@ showservices() {
 			[[ ${#s} -gt $max ]] && max=${#s}
 		done
 		((INDV=3+max+IND))
-		engine=" $E[${INDV}G| Pastebin engine:"
+		engine=" $E[${INDV}G| Pastebin engine"
 	fi
-	echo "   Name: $E[${IND}G| Url:$engine"
+	echo "    Name $E[${IND}G| URL$engine"
 	echo -ne "   "; for((s=3;s<${INDV:-${IND}}+17;s++)); do (( $s == IND-1 || $s == INDV-1 )) && echo -ne "|" || echo -ne "="; done; echo
 	for s in $SERVICES; do
 		[[ $s = $DEFAULT_SERVICE ]] && d="*" || d=" "
