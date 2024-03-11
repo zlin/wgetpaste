@@ -600,7 +600,7 @@ showservices() {
 		done
 		exit 0
 	fi
-	echo "Services supported: (case sensitive):"
+	echo "Services supported (case sensitive):"
 	max=4
 	for s in $SERVICES; do
 		[[ ${#s} -gt $max ]] && max=${#s}
